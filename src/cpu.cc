@@ -152,7 +152,7 @@ void	cpu::ldhl(char n)
 	{
 		dis = -n;
 		res = _registers.sp - dis;
-		if ((((_registers.sp & 0x0F00) - (dis & 0x0F00)) >> 8) & 0x10 == 0x10)
+		if (((((_registers.sp & 0x0F00) - (dis & 0x0F00)) >> 8) & 0x10) == 0x10)
 			_registers.f |= bitflags::h;
 		else
 			_registers.f &= ~(bitflags::h);
@@ -166,7 +166,7 @@ void	cpu::ldhl(char n)
 	{
 		dis = n;
 		res = _registers.sp + dis;
-		if ((((_registers.sp & 0x0F00) + (dis & 0x0F00)) >> 8) & 0x10 == 0x10)
+		if (((((_registers.sp & 0x0F00) + (dis & 0x0F00)) >> 8) & 0x10) == 0x10)
 			_registers.f |= bitflags::h;
 		else
 			_registers.f &= ~(bitflags::h);
@@ -201,7 +201,7 @@ void	cpu::add(unsigned short *regp)
 	unsigned short res = *regp + _registers.hl;
 	unsigned short ftest = 1 << 11;
 	_registers.f &= ~(bitflags::n);
-	if ((((_registers.hl & 0x0F00) + (*regp & 0x0F00)) >> 8) & 0x10 == 0x10)
+	if (((((_registers.hl & 0x0F00) + (*regp & 0x0F00)) >> 8) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
@@ -222,7 +222,7 @@ void	cpu::add(char val)
 	{
 		dis = -val;
 		res = _registers.sp - dis;
-		if ((((_registers.sp & 0x0F00) - (dis & 0x0F00)) >> 8) & 0x10 == 0x10)
+		if (((((_registers.sp & 0x0F00) - (dis & 0x0F00)) >> 8) & 0x10) == 0x10)
 			_registers.f |= bitflags::h;
 		else
 			_registers.f &= ~(bitflags::h);
@@ -236,7 +236,7 @@ void	cpu::add(char val)
 	{
 		dis = val;
 		res = _registers.sp + dis;
-		if ((((_registers.sp & 0x0F00) + (dis & 0x0F00)) >> 8) & 0x10 == 0x10)
+		if (((((_registers.sp & 0x0F00) + (dis & 0x0F00)) >> 8) & 0x10) == 0x10)
 			_registers.f |= bitflags::h;
 		else
 			_registers.f &= ~(bitflags::h);
@@ -256,7 +256,7 @@ void	cpu::add(unsigned char val)
 	unsigned char res = _registers.a + val;
 	ftest = 1 << 3;
 //	if (_registers.a & ftest && val & ftest)
-	if (((_registers.a & 0x0F) + (val & 0x0F)) & 0x10 == 0x10)
+	if ((((_registers.a & 0x0F) + (val & 0x0F)) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
@@ -283,7 +283,7 @@ void	cpu::adc(unsigned char val)
 		_registers.a++;
 	unsigned char res = _registers.a + val;
 //	if (_registers.a & ftest && val & ftest)
-	if (((_registers.a & 0x0F) + (val & 0x0F)) & 0x10 == 0x10)
+	if ((((_registers.a & 0x0F) + (val & 0x0F)) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
@@ -308,7 +308,7 @@ void	cpu::sub(unsigned char val)
 	ftest = 1 << 3;
 	unsigned char res = _registers.a - val;
 //	if (!(_registers.a & ftest) && val & ftest)
-	if (((_registers.a & 0x0F) - (val & 0x0F)) & 0x10 == 0x10)
+	if ((((_registers.a & 0x0F) - (val & 0x0F)) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
@@ -335,7 +335,7 @@ void	cpu::sbc(unsigned char val)
 		_registers.a++;
 	unsigned char res = _registers.a - val;
 //	if (!(_registers.a & ftest) && val & ftest)
-	if (((_registers.a & 0x0F) - (val & 0x0F)) & 0x10 == 0x10)
+	if ((((_registers.a & 0x0F) - (val & 0x0F)) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
@@ -390,7 +390,7 @@ void	cpu::cp(unsigned char val)
 
 	ftest = 1 << 3;
 //	if (!(_registers.a & ftest) && val & ftest)
-	if (((_registers.a & 0x0F) - (val & 0x0F)) & 0x10 == 0x10)
+	if ((((_registers.a & 0x0F) - (val & 0x0F)) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
@@ -421,7 +421,7 @@ void	cpu::inc(unsigned char *reg)
 		_mmu->writeTo(_registers.hl, val + 1);
 	}
 	_registers.f = val + 1 ? _registers.f & ~(bitflags::z) : _registers.f | bitflags::z; 
-	if (((val & 0x0F) + (0x01)) & 0x10 == 0x10)
+	if ((((val & 0x0F) + (0x01)) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
@@ -447,7 +447,7 @@ void	cpu::dec(unsigned char *reg)
 		_mmu->writeTo(_registers.hl, val - 1);
 	}
 	_registers.f = val - 1 ? _registers.f & ~(bitflags::z) : _registers.f | bitflags::z; 
-	if (((val & 0x0F) - (0x01)) & 0x10 == 0x10)
+	if ((((val & 0x0F) - (0x01)) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
