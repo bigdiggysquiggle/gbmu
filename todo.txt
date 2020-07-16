@@ -1,0 +1,10 @@
+fix my memory bank controller
+
+have save states first export cpu variables, then append with all the ram info from the mmu
+
+figure out why my code is in a restart loop instead of showing the tetris copyright screen
+---having a shitload of issue getting it to render new shit
+
+sub flags set if no borrows from hc/cy
+
+verify hc/c flag behaviour on subtraction
