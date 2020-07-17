@@ -51,22 +51,30 @@ int main(int ac, char **av)
 	}
 	render = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
 	frame = SDL_CreateTexture(render, SDL_PIXELFORMAT_RGBA32,SDL_TEXTUREACCESS_STREAMING, 160, 144);
-	unsigned	cycles = 1;
+	unsigned	cycles = 0;
+	unsigned char cyc;
 	SDL_Event e;
 	bool	quit = false;
+	SDL_PumpEvents();
 	while (quit == false)
 	{
+		memunit->pollInput();
 		memunit->timerInc(cycles);
-		processor.opcode_parse();
-		if (graphics.frameRender())
+		cyc = processor.opcode_parse();
+		if ((cyc >= graphics._cycles && graphics.frameRender(cyc)) || graphics.offcheck(cyc))
 		{
 			SDL_UpdateTexture(frame, NULL, graphics.pixels, (160 * 4));
 			SDL_RenderCopy(render, frame, NULL, NULL);
 			SDL_RenderPresent(render);
 		}
-		cycles = (cycles == 4194304) ? 1 : cycles + 1;
-		if (SDL_PollEvent(&e) && e.type == SDL_QUIT)
-			quit = true;
+		cycles += cyc;
+		if (cycles >= 419304)
+			cycles -= 419304;
+		while(SDL_PollEvent(&e) != 0)
+		{
+			if(e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE))
+				quit = true;
+		}
 	}
 	SDL_DestroyRenderer(render);
 	SDL_DestroyWindow(win);

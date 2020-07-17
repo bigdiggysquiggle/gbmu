@@ -1,6 +1,7 @@
 #ifndef MEM
 #define MEM
 #include "cart.hpp"
+#include <SDL2/SDL.h>
 #include <vector>
 
 //0x0000 - 0x7fff ROM area
@@ -33,6 +34,7 @@
 class mmu {
 	public:
 		mmu();
+		void pollInput(void);
 		void loadCart(char *filename);
 		void setINTS(void);
 		void STATupdate(unsigned char);

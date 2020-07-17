@@ -82,14 +82,16 @@ unsigned ctab[] = {
 void	ppu::VBlank(unsigned char mode)
 {
 	_mmu->STATupdate(0x01);
-	_cycles = 4560;
+	_cycles += 456;
 	unsigned char IF = _mmu->accessAt(0xFF0F);
 	_mmu->writeTo(0xFF0F, IF | 0x01);
 }
 
-//with cached tiles we don't need to do it this way
 void	ppu::printSprite(unsigned char sprite[16], unsigned char attr[4], unsigned char lcdc)
 {
+	if (0 == attr[1] || attr[1] >= 168)
+		return ;
+	attr[1] = attr[1] < 8 ? 168 - attr[1] : attr[1] - 8;
 	unsigned char obp = attr[3] & (1 << 4) ? _mmu->PaccessAt(0xFF49) : _mmu->PaccessAt(0xFF48);
 	unsigned obpt[] = {
 		0x000000, ctab[(obp >> 2) & 3],
@@ -107,27 +109,25 @@ void	ppu::printSprite(unsigned char sprite[16], unsigned char attr[4], unsigned 
 		lower = sprite[15 - (2 *(_y % 8))];
 		upper = sprite[14 - (2 * (_y % 8))];
 	}
-	unsigned char i = 0;
+	unsigned char i = -1;
 	unsigned char c;
 	if (!(attr[3] & (1 << 5)))
-		while (i < 8)
+		while (++i < 8)
 		{
 			c = (lower >> (7 - i) & 1) | ((upper >> (7 - i) & 1) << 1);
-			if (!c)
+			if (!c || attr[i] + i > 160)
 				continue ;
 			if (!(attr[3] & (1 << 7) || obpt[c] == ctab[bgp & 0x03]))
 				pixels[(_y * 160) + attr[1] + i] = obpt[c];
-			i++;
 		}
 	else
-		while (i < 8)
+		while (++i < 8)
 		{
 			c = (lower >> i & 1) | ((upper >> i & 1) << 1);
-			if (!c)
+			if (!c || attr[i] + i > 160)
 				continue ;
 			if (!(attr[3] & (1 << 7) || obpt[c] == ctab[bgp & 0x03]))
 				pixels[(_y * 160) + attr[1] + i] = obpt[c];
-			i++;
 		}
 }
 
@@ -137,12 +137,12 @@ void	ppu::printSprites16(unsigned char lcdc)
 	unsigned short addr = 0x8000;
 	unsigned char sprite[16];
 	unsigned char byte;
-	while (--i >= 0)
+	while (i-- > 0)
 	{
 		byte = 0;
 		while (byte < 16)
 		{
-			if (spriteattr[i][0] + 8 > _y)
+			if ((spriteattr[i][0] - (_y + 16)) < 8)
 				sprite[byte] = _mmu->PaccessAt(addr + byte + ((spriteattr[i][2] & 0xFE) * 16));
 			else
 				sprite[byte] = _mmu->PaccessAt(addr + byte + ((spriteattr[i][2] | 0x01) * 16));
@@ -158,7 +158,7 @@ void	ppu::printSprites8(unsigned char lcdc)
 	unsigned short addr = 0x8000;
 	unsigned char sprite[16];
 	unsigned char byte;
-	while (--i >= 0)
+	while (i-- > 0)
 	{
 		byte = 0;
 		while (byte < 16)
@@ -178,7 +178,7 @@ void	ppu::readOAM(unsigned char lcdc)
 	while (addr < 0xFE9F && count < 10)
 	{
 		spriteattr[count][0] = _mmu->PaccessAt(addr);
-		if (_y <= spriteattr[count][0] + 7 + (8 * ssize) && spriteattr[count][0] <= _y + 7 + (8 * ssize))
+		if (0 < spriteattr[count][0] && spriteattr[count][0] <= 160 && _y + 16 <= spriteattr[count][0])
 		{
 			unsigned i = 0;
 			while (++i < 4)
@@ -192,6 +192,7 @@ void	ppu::readOAM(unsigned char lcdc)
 
 void	ppu::readSprites(unsigned char lcdc)
 {
+	_pause = 0;
 	if (lcdc & (1 << 6))
 	{
 		for (unsigned char d = 0; d < spritecount; d++)
@@ -334,7 +335,7 @@ void	ppu::renderLine(unsigned char lcdc)
 //		_pause = 6;
 	if (lcdc & 1) //works different for cgb
 		readTiles(lcdc);
-	if (lcdc & 2)
+	if (lcdc & 2 && spritecount)
 		readSprites(lcdc);
 }
 
@@ -348,98 +349,76 @@ void	ppu::renderLine(unsigned char lcdc)
 //either have hblank print all at once or
 //have pixel draw function that runs each cycle
 //skip the first frame
-int		ppu::frameRender(void)
+int		ppu::frameRender(unsigned char cyc)
 {
 	unsigned char	lcdc = _mmu->PaccessAt(0xFF40);
 	unsigned char	mode = _mmu->PaccessAt(0xFF41);
-	if (lcdc & (1 << 7) && !_cycles)
+	_cycles = cyc - _cycles;
+  	unsigned char y = _mmu->PaccessAt(0xFF44);
+	unsigned char currmode = mode & 0x03;
+	mode &= ~(0x03);
+	unsigned i = 0;
+	switch(currmode)
 	{
-	  	unsigned char y = _mmu->PaccessAt(0xFF44);
-//		printf("switching\nlcdc 0x%02hhx stat 0x%02hhx y %u\n", lcdc, mode, y);
-		unsigned char currmode = mode & 0x03;
-		mode &= ~(0x03);
-		unsigned i = 0;
-		switch(currmode)
-		{
-			case 0://move to mode 1/2
-				if (_y < 144)
-					y++;
-		  		if (y == 144)
-				{
-//					printf("mode 1 vblank\n\n");
-					_y = 144;
-					VBlank(mode);
-					_mmu->writeTo(0xFF44, y);
-					return 1;
-				}
-//				printf("mode 2 oam\n");
-				mode |= 0x02;
+		case 0://move to mode 1/2
+			if (_y < 144)
+				y++;
+	  		if (y == 144)
+			{
+//				printf("mode 1 vblank\n\n");
+				_y = 144;
+				VBlank(mode);
 				_mmu->writeTo(0xFF44, y);
-				readOAM(lcdc);
-				_cycles = 80;
-				break;
-			case 1://move to mode 2
+				return 1;
+			}
+//			printf("mode 2 oam\n");
+			mode |= 0x02;
+			_mmu->writeTo(0xFF44, y);
+			readOAM(lcdc);
+			_cycles += 80;
+			break;
+		case 1://move to mode 2
+			if (_y <= 153)
+			{
+				_cycles = cyc - _cycles;
+				_cycles += 456;
+				_y++;
+//				printf("y %u\n", _y);
+				mode |= 0x01;
+				_mmu->writeTo(0xFF44, (_y == 154) ? 0 : _y);
+			}
+			else
+			{
 //				printf("mode 2 oam\n");
 				mode |= 0x02;
 				readOAM(lcdc);
-				_cycles = 80;
-				break;
-			case 2://move to mode 3
-//				printf("mode 3 oam/vram\n");	
-				mode |= 0x03;
-				if (y != _y || (lcdc & 1 << 5 && !(LCDC & 1 << 5)))
-				{
-					_y = y;
-					renderLine(lcdc);
-				}
-				_hblank = 208 - _pause;
-				_cycles = 168; //168 - 291 depending on sprite count
-				break;
-			case 3://moving to mode 0
-//				printf("mode 0 hblank\n");
-				_cycles = _hblank; //85 - 208 depending on mode 3 time
-				break;
-		}
+				_cycles += 80;
+			}
+			break;
+		case 2://move to mode 3
+//			printf("mode 3 oam/vram\n");	
+			mode |= 0x03;
+			if (y != _y || (lcdc & 1 << 5 && !(LCDC & 1 << 5)))
+			{
+				_y = y;
+				renderLine(lcdc);
+			}
+			_hblank = 208 - _pause;
+			_cycles += 168; //168 - 291 depending on sprite count
+			break;
+		case 3://moving to mode 0
+//			printf("mode 0 hblank\n");
+			_cycles += _hblank; //85 - 208 depending on mode 3 time
+			break;
+//		}
 //		auto stop = std::chrono::high_resolution_clock::now();
 //		auto dur = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
 //		std::cout << "graphics switch: " << dur.count() << std::endl;
-	  	if (_off == true)
-			_off = false;
-		_mmu->STATupdate(mode);
-		LCDC = lcdc;
-		STAT = mode;
-//			printf("\n");
 	}
-	else if (lcdc & (1 << 7))
-	{
-//		printf("Cycles left: %u\nPause left: %u\nMode: %u\n\n\n", _cycles, _pause, mode & 3);
-		if (_pause)
-			_pause--;
-		else
-		{
-			_cycles--;
-			if (_off == false && (mode & 0x03) == 0x01 && (!(_cycles % 456) || !_cycles))
-			{
-				_y++;
-//				printf("y %u\n", _y);
-				_mmu->writeTo(0xFF44, (_y == 154) ? 0 : _y);
-			}
-		}
+	_mmu->STATupdate(mode);
+	LCDC = lcdc;
+	STAT = mode;
+//	printf("\n");
 		//check lcdc/stat changes here
-	}
-	else if (_off == false)
-	{
-//		printf("screen off\n");
-			_off = true;
-			for(unsigned i = 0; i < 23040; i++)
-				pixels[i] = 0xFFFFFFFF;
-			_pause = 0;
-			_cycles = 70224;
-			mode &= ~(mode & 3);
-			_mmu->writeTo(0xFF44, 0);
-			_mmu->STATupdate(mode);
-			return 1;
-	}
-//	printf("\n\n");
 	return 0;
 }

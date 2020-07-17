@@ -119,7 +119,7 @@ struct iomask {
 };
 
 struct iomask _IOmasks[] = {
-	{0xC0, 0x00, 0xF0}, //0xFF00 joypad (0x0F are read only)
+	{0xC0, 0x00, 0xC0}, //0xFF00 joypad (0x0F are read only)
 	{0xFF, 0x00, 0xFF}, //0xFF01 serial
 	{0x7E, 0x00, 0xFF}, //0xFF02 serial clock (0x7C cgb)
 	{0xFF, 0x00, 0xFF}, //0xFF03 unused
@@ -260,6 +260,7 @@ mmu::mmu()
 	_oamtime = 0;
 	for (unsigned char io = 0; io < 0x7F; io++)
 		_IOReg[io] = _IOmasks[io].write;
+	_IOReg[0x00] |= 0x0F;
 //	while (init_tab[++i].addr)
 //		writeTo(init_tab[i].addr, init_tab[i].val);
 // TODO: hand code the nintendo logo tiles
@@ -269,6 +270,44 @@ mmu::mmu()
 //	while (nlog < 0x81A0)
 //		writeTo(nlog++, nlogo[byte++]);
 }
+
+void mmu::pollInput(void)
+{
+	_IOReg[0x00] |= 0x0F;
+	const unsigned char *keystat = SDL_GetKeyboardState(NULL);
+	unsigned char res = 0;
+	if (_IOReg[0x00] & 0x10)
+	{
+		if (keystat[SDL_SCANCODE_UP])
+			res |= 0x0B;
+		if (keystat[SDL_SCANCODE_DOWN])
+			res |= 0x07;
+		if (keystat[SDL_SCANCODE_LEFT])
+			res |= 0x0D;
+		if (keystat[SDL_SCANCODE_RIGHT])
+			res |= 0x0E;
+	}
+	else if (_IOReg[0x00] & 0x20)
+	{
+		if (keystat[SDL_SCANCODE_RSHIFT])
+			res |= 0x0B;
+		if (keystat[SDL_SCANCODE_RETURN])
+			res |= 0x07;
+		if (keystat[SDL_SCANCODE_X])
+			res |= 0x0D;
+		if (keystat[SDL_SCANCODE_Z])
+			res |= 0x0E;
+	}
+	_IOReg[0x00] ^= res;
+}
+
+
+
+		//10 20
+		//7 down/start
+		//b up/select
+		//d left/b
+		//e right/a
 
 void mmu::loadCart(char *filename)
 {
@@ -297,7 +336,7 @@ void	mmu::setINTS(void)
 		_IOReg[0x41] &= ~(1 << 2);
 	if (((LY == LYC && _IOReg[0x41] & (1 << 6)) || (mode == 2 && _IOReg[0x41] & (1 << 5)) || (mode == 1 && (_IOReg[0x41] & (1 << 4) || _IOReg[0x41] & (1 << 5))) || (mode == 0 && _IOReg[0x41] & (1 << 3))))
 		_IOReg[0x0F] |= 0x02;
-//	if ((_IOReg[0x00] & 0x3F) != 0x3F) //joypad interrupt
+//	if ((_IOReg[0x00] & 0x0F) != 0x0F) //joypad interrupt
 //		_IOReg[0x0F] |= (1 << 4);
 }
 
@@ -399,7 +438,7 @@ unsigned char	mmu::accessAt(unsigned short addr)
 
 void	mmu::STATupdate(unsigned char mode)
 {
-	_IOReg[0x41] &= ~(0x03);
+	_IOReg[0x41] &= 0xF8;
 	_IOReg[0x41] += (mode & 0x03);
 }
 
@@ -412,6 +451,8 @@ void	mmu::_IOwrite(unsigned short addr, unsigned char msg)
 	_IOReg[addr] = (msg | _IOmasks[addr].write) & _IOmasks[addr].readonly;
 	if (addr == 0x41)
 		_IOReg[0x41] |= mode;
+	if (!addr)
+		_IOReg[0x00] |= msg;
 	if (addr == 0x46 && (_IOReg[0x41] & 0x03) < 0x02)
 	{
 		unsigned short addr = (unsigned short)msg << 8;

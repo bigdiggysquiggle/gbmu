@@ -468,6 +468,9 @@ void	cpu::swap(unsigned char *reg)
 		*reg = val;
 	else
 		_mmu->writeTo(_registers.hl, val);
+	_registers.f &= ~(bitflags::z + bitflags::n + bitflags::h + bitflags::cy);
+	if (!val)
+		_registers.f |= bitflags::z;
 }
 
 
@@ -534,20 +537,20 @@ void	cpu::stop(void)//check p1 bits and p1 line
 		continue;
 }
 
-void	cpu::di(void)
+unsigned char	cpu::di(void)
 {
-	//verify if I call interrupt_check as normal
-	opcode_parse();
-	_inCycles += 4;
+	unsigned char cyc = 4;
+	cyc += opcode_parse();
 	this->_ime = 0;
+	return cyc;
 }
 
-void	cpu::ei(void)
+unsigned char	cpu::ei(void)
 {
-//	_registers.pc++;
-	opcode_parse();
-	_inCycles += 4;
+	unsigned char cyc = 4;
+	cyc += opcode_parse();
 	this->_ime = 1;
+	return cyc;
 }
 
 void	cpu::rlca(void)
@@ -867,103 +870,10 @@ void	cpu::reti(void)
 //	_mmu->writeTo(0xFFFF, 0x1F);
 }
 
-void	cpu::opcode_parse(void)
+unsigned char	cpu::opcode_parse(void)
 {
-	opcode_parse(1);
+	return opcode_parse(1);
 }
-/*
-void	cpu::alu(unsigned char fun, unsigned char val)
-{
-	switch(fun)
-	{
-		case 0:
-			add(val);
-			break;
-		case 1:
-			adc(val);
-			break;
-		case 2:
-			sub(val);
-			break;
-		case 3:
-			sbc(val);
-			break;
-		case 4:
-			_and(val);
-			break;
-		case 5:
-			_xor(val);
-			break;
-		case 6:
-			_or(val);
-			break;
-		case 7:
-			cp(val);
-			break;
-	}
-}
-
-void	cpu::rot(unsigned char fun, unsigned char *val)
-{
-	switch(fun)
-	{
-		case 0:
-			rlc(val);
-			break;
-		case 1:
-			rrc(val);
-			break;
-		case 2:
-			rl(val);
-			break;
-		case 3:
-			rr(val);
-			break;
-		case 4:
-			sla(val);
-			break;
-		case 5:
-			sra(val);
-			break;
-		case 6:
-			swap(val);
-			break;
-		case 7:
-			srl(val);
-			break;
-	}
-}
-
-void	cpu::acctab(unsigned char fun)
-{
-	switch(fun)
-	{
-		case 0:
-			rlca();
-			break;
-		case 1:
-			rrca();
-			break;
-		case 2:
-			rla();
-			break;
-		case 3:
-			rra();
-			break;
-		case 4:
-			daa();
-			break;
-		case 5:
-			cpl();
-			break;
-		case 6:
-			scf();
-			break;
-		case 7:
-			ccf();
-			break;
-	}
-}*/
 
 unsigned char cycletab[] = {
 	4,			//{"NOP", ""},
@@ -1483,17 +1393,14 @@ unsigned char _cbtab[] ={
 	8,			//{"SET", "7, A"}
 };
 
-void	cpu::opcode_parse(unsigned char haltcheck)
+unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 {
+	unsigned char cyc = 0;
 	_mmu->setINTS();
 	interrupt_check();
-	if (_mmu->_oamtime)
-		_mmu->_oamtime--;
-	if (--_inCycles)
-		return ;
 	unsigned char opcode = _mmu->accessAt(_registers.pc);
 //	if (debug == true)
-	printf("\t\tcurrent pc: 0x%04x\n", _registers.pc);
+//	printf("\t\tcurrent pc: 0x%04x\n", _registers.pc);
 	unsigned char ftab[4];
 	_registers.pc += haltcheck;
 	ftab[0] = _registers.f & bitflags::z ? 0 : 1;
@@ -1520,13 +1427,13 @@ void	cpu::opcode_parse(unsigned char haltcheck)
 		&_registers.hl,
 		&_registers.af};
 //	if (debug == true)
-		printf("\tnz %d z %d nc %d c %d\n\n", ftab[0], ftab[1], ftab[2], ftab[3]);
+//		printf("\tnz %d z %d nc %d c %d\n\n", ftab[0], ftab[1], ftab[2], ftab[3]);
 	if (opcode == 0xCB)
 	{
 		opcode = _mmu->accessAt(_registers.pc++);
-		_inCycles = _cbtab[opcode];
+		cyc = _cbtab[opcode];
 //		if (debug == true)
-			debug_print(opcode, 1, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
+//			debug_print(opcode, 1, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
 		switch(X(opcode))
 		{
 			case 0:
@@ -1544,13 +1451,13 @@ void	cpu::opcode_parse(unsigned char haltcheck)
 			default:
 				exit(1);
 		}
-		return ;
+		return cyc;
 	}
-	_inCycles = cycletab[opcode];
+	cyc = cycletab[opcode];
 //	if (debug == true)
-		debug_print(opcode, 0, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
+//		debug_print(opcode, 0, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
 	if (!opcode)
-		return;
+		return cyc;
    if (opcode < 0x3F && ((opcode & 0x0F) == 0x06 || (opcode & 0x0F) == 0x0E))//LD r, n
 	   ld(_regtab[Y(opcode)], _mmu->accessAt(_registers.pc++));
 	else if (0x40 <= opcode && opcode <= 0x7F)//LD r, r 0x76 HALT
@@ -1699,9 +1606,16 @@ void	cpu::opcode_parse(unsigned char haltcheck)
 		std::cerr << "Unhandled opcode: 0x" << std::hex << +opcode << std::endl;
 		exit(1);
 	}
-//	if (_registers.pc >= 0x343)// (_registers.pc >= 0x2E1)
+	if (_mmu->_oamtime)
+		_mmu->_oamtime = cyc > _mmu->_oamtime ? 0 : _mmu->_oamtime - cyc;
+	return cyc;
+	unsigned char c;
+//	if (_registers.pc >= 0x36C && _registers.pc <= 0x36F)
 //		debug = true;
 //	if (debug)
+//	{
+//		printf("step\n");
 //		read(0, &c, 1);
+//	}
 //	usleep(100000);
 }

@@ -1,5 +1,3 @@
 fix my memory bank controller
 
 have save states first export cpu variables, then append with all the ram info from the mmu
-
-instruction 0x0350 flags are wrong. figure out where they go wrong

@@ -8,15 +8,36 @@
 class ppu {
 	public:
 		ppu(std::shared_ptr<mmu>);
-		int	frameRender(void);
+		int	frameRender(unsigned char);
 
-		unsigned	pixels[23040];
-	private:
 		unsigned		_cycles;
+		inline unsigned char offcheck(unsigned char cyc)
+		{
+			unsigned char lcdc = (_mmu->PaccessAt(0xFF40) & (1 << 7));
+			if (lcdc)
+			{
+				if (_off == true)
+					_off = false;
+				_cycles -= cyc;
+			}
+			else if (_off == false)
+			{
+				_off = true;
+				for (unsigned i = 0; i < 23040; i++)
+					pixels[i] = 0xFFFFFFFF;
+				_cycles = 70224;
+				_mmu->STATupdate(0);
+				_mmu->writeTo(0xFF44, 0);
+				return 1;
+			}
+			return 0;
+		}
+		unsigned	pixels[23040];
+		bool			_off;
+	private:
 		unsigned char	_hblank;
 		unsigned char	_pause;
 //		unsigned char	_lastpause;
-		bool			_off;
 //		unsigned char	_x;
 		unsigned char	_y;
 		std::shared_ptr<mmu>	_mmu;
