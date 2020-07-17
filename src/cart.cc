@@ -96,6 +96,8 @@ cart	cart::loadCart(char *fname)
 			return *this;
 		case 0x01 ... 0x03: //MBC1
 			return mbc1(romSizetab(header[0x148]), ramSizetab(header[0x149]), rom);
+		case 0x04:
+			break ;
 		case 0x05 ... 0x06: //MBC2
 			return mbc2(romSizetab(header[0x148]), ramSizetab(header[0x149]), rom);
 		case 0x07:

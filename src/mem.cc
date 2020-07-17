@@ -271,43 +271,41 @@ mmu::mmu()
 //		writeTo(nlog++, nlogo[byte++]);
 }
 
+		//20 10
+		//8 down/start
+		//4 up/select
+		//2 left/b
+		//1 right/a
+
 void mmu::pollInput(void)
 {
 	_IOReg[0x00] |= 0x0F;
 	const unsigned char *keystat = SDL_GetKeyboardState(NULL);
 	unsigned char res = 0;
-	if (_IOReg[0x00] & 0x10)
+	if (_IOReg[0x00] & 0x20)
 	{
-		if (keystat[SDL_SCANCODE_UP])
-			res |= 0x0B;
 		if (keystat[SDL_SCANCODE_DOWN])
-			res |= 0x07;
+			res |= 0x08;
+		if (keystat[SDL_SCANCODE_UP])
+			res |= 0x04;
 		if (keystat[SDL_SCANCODE_LEFT])
-			res |= 0x0D;
+			res |= 0x02;
 		if (keystat[SDL_SCANCODE_RIGHT])
-			res |= 0x0E;
+			res |= 0x01;
 	}
-	else if (_IOReg[0x00] & 0x20)
+	else if (_IOReg[0x00] & 0x10)
 	{
-		if (keystat[SDL_SCANCODE_RSHIFT])
-			res |= 0x0B;
 		if (keystat[SDL_SCANCODE_RETURN])
-			res |= 0x07;
+			res |= 0x08;
+		if (keystat[SDL_SCANCODE_RSHIFT])
+			res |= 0x04;
 		if (keystat[SDL_SCANCODE_X])
-			res |= 0x0D;
+			res |= 0x02;
 		if (keystat[SDL_SCANCODE_Z])
-			res |= 0x0E;
+			res |= 0x01;
 	}
 	_IOReg[0x00] ^= res;
 }
-
-
-
-		//10 20
-		//7 down/start
-		//b up/select
-		//d left/b
-		//e right/a
 
 void mmu::loadCart(char *filename)
 {

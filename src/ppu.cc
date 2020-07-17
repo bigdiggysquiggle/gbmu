@@ -89,6 +89,7 @@ void	ppu::VBlank(unsigned char mode)
 
 void	ppu::printSprite(unsigned char sprite[16], unsigned char attr[4], unsigned char lcdc)
 {
+	printf("sprite x %u y %u\n", attr[1], attr[0]);
 	if (0 == attr[1] || attr[1] >= 168)
 		return ;
 	attr[1] = attr[1] < 8 ? 168 - attr[1] : attr[1] - 8;
@@ -178,7 +179,7 @@ void	ppu::readOAM(unsigned char lcdc)
 	while (addr < 0xFE9F && count < 10)
 	{
 		spriteattr[count][0] = _mmu->PaccessAt(addr);
-		if (0 < spriteattr[count][0] && spriteattr[count][0] <= 160 && _y + 16 <= spriteattr[count][0])
+		if (0 < spriteattr[count][0] && spriteattr[count][0] <= 160 && _y + 8 <= spriteattr[count][0] && spriteattr[count][0] <= _y + 16)
 		{
 			unsigned i = 0;
 			while (++i < 4)
