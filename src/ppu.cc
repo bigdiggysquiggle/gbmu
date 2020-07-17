@@ -90,9 +90,8 @@ void	ppu::VBlank(unsigned char mode)
 void	ppu::printSprite(unsigned char sprite[16], unsigned char attr[4], unsigned char lcdc)
 {
 	printf("sprite x %u y %u\n", attr[1], attr[0]);
-	if (0 == attr[1] || attr[1] >= 168)
+	if (attr[1] >= 160)
 		return ;
-	attr[1] = attr[1] < 8 ? 168 - attr[1] : attr[1] - 8;
 	unsigned char obp = attr[3] & (1 << 4) ? _mmu->PaccessAt(0xFF49) : _mmu->PaccessAt(0xFF48);
 	unsigned obpt[] = {
 		0x000000, ctab[(obp >> 2) & 3],
@@ -102,32 +101,32 @@ void	ppu::printSprite(unsigned char sprite[16], unsigned char attr[4], unsigned 
 	unsigned char bgp = _mmu->PaccessAt(0xFF47);
 	if (!(attr[3] & (1 << 6)))
 	{
-		lower = sprite[2 * (_y % 8)];
-		upper = sprite[(2 * (_y % 8)) + 1];
+		lower = sprite[2 * ((_y + attr[0]) % 8)];
+		upper = sprite[(2 * ((_y + attr[0]) % 8)) + 1];
 	}
 	else
 	{
-		lower = sprite[15 - (2 *(_y % 8))];
-		upper = sprite[14 - (2 * (_y % 8))];
+		lower = sprite[15 - (2 *((_y + attr[0]) % 8))];
+		upper = sprite[14 - (2 * ((_y + attr[0]) % 8))];
 	}
 	unsigned char i = -1;
 	unsigned char c;
 	if (!(attr[3] & (1 << 5)))
 		while (++i < 8)
 		{
-			c = (lower >> (7 - i) & 1) | ((upper >> (7 - i) & 1) << 1);
+			c = ((lower >> (7 - i)) & 1) | (((upper >> (7 - i)) & 1) << 1);
 			if (!c || attr[i] + i > 160)
 				continue ;
-			if (!(attr[3] & (1 << 7) || obpt[c] == ctab[bgp & 0x03]))
+			if (!(attr[3] & (1 << 7)) || pixels[(_y * 160) + attr[1] + i] == ctab[bgp & 0x03])
 				pixels[(_y * 160) + attr[1] + i] = obpt[c];
 		}
 	else
 		while (++i < 8)
 		{
-			c = (lower >> i & 1) | ((upper >> i & 1) << 1);
+			c = ((lower >> i) & 1) | (((upper >> i) & 1) << 1);
 			if (!c || attr[i] + i > 160)
 				continue ;
-			if (!(attr[3] & (1 << 7) || obpt[c] == ctab[bgp & 0x03]))
+			if (!(attr[3] & (1 << 7)) || pixels[(_y * 160) + attr[1] + i] == ctab[bgp & 0x03])
 				pixels[(_y * 160) + attr[1] + i] = obpt[c];
 		}
 }
@@ -143,7 +142,7 @@ void	ppu::printSprites16(unsigned char lcdc)
 		byte = 0;
 		while (byte < 16)
 		{
-			if ((spriteattr[i][0] - (_y + 16)) < 8)
+			if ((_y - spriteattr[i][0]) < 8)
 				sprite[byte] = _mmu->PaccessAt(addr + byte + ((spriteattr[i][2] & 0xFE) * 16));
 			else
 				sprite[byte] = _mmu->PaccessAt(addr + byte + ((spriteattr[i][2] | 0x01) * 16));
@@ -178,12 +177,12 @@ void	ppu::readOAM(unsigned char lcdc)
 	unsigned char	ssize = (lcdc >> 2) & 1;
 	while (addr < 0xFE9F && count < 10)
 	{
-		spriteattr[count][0] = _mmu->PaccessAt(addr);
-		if (0 < spriteattr[count][0] && spriteattr[count][0] <= 160 && _y + 8 <= spriteattr[count][0] && spriteattr[count][0] <= _y + 16)
+		spriteattr[count][0] = _mmu->PaccessAt(addr) - 16;
+		if (0 <= spriteattr[count][0] && spriteattr[count][0] <= 154 && _y >= spriteattr[count][0] && spriteattr[count][0] + 8 + (8 * ssize) >= _y)
 		{
-			unsigned i = 0;
-			while (++i < 4)
-				spriteattr[count][i] = _mmu->PaccessAt(addr + i);
+			spriteattr[count][1] = _mmu->PaccessAt(addr + 1) - 8;
+			spriteattr[count][2] = _mmu->PaccessAt(addr + 2);
+			spriteattr[count][3] = _mmu->PaccessAt(addr + 3);
 			count++;
 		}
 		addr += 4;

@@ -59,7 +59,7 @@ int main(int ac, char **av)
 	while (quit == false)
 	{
 		memunit->pollInput();
-		memunit->timerInc(cycles);
+		memunit->timerInc(cycles + 1);
 		cyc = processor.opcode_parse();
 		if ((cyc >= graphics._cycles && graphics.frameRender(cyc)) || graphics.offcheck(cyc))
 		{
