@@ -46,10 +46,6 @@ ppu::ppu(std::shared_ptr<mmu> unit) : _mmu(unit)
 //mode 2 OAM access
 //mode 3 data transfer
 
-//refactor this later to print one line at a time following
-//cpu cycles. compare each sprite to LY to find the first
-//10 that fit and print those. discard the rest
-
 //0 white 1 light gray 2 dark grey 3 black
 
 unsigned ctab[] = {

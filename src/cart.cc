@@ -2,8 +2,17 @@
 
 cart::cart()
 {
+	return ;
+}
+
+cart::cart(FILE *rom, unsigned short ram)
+{
 	_romSpace.resize(0x02);
 	_ramSpace.resize(0x00);
+	fread(&_romSpace[0x00][0x00], 1, 0x4000, rom);
+	fread(&_romSpace[0x01][0x00], 1, 0x4000, rom);
+	if (ram)
+		_ramSpace.resize(ram);
 	return;
 }
 
@@ -66,11 +75,10 @@ unsigned short	cart::ramSizetab(unsigned char size)
 	}
 	return 0x00;
 }
-
-cart	cart::loadCart(char *fname)
+std::unique_ptr<cart>	cart::loadCart(char *fname)
 {
 	if (!fname)
-		return *this;
+		throw "Error: No cart name";
 	//cart reading. 0x147 mbc 0x148 romsize 0x149 ramsize
 	unsigned char	header[0x14F];
 	FILE *rom = fopen(fname, "r");
@@ -90,24 +98,17 @@ cart	cart::loadCart(char *fname)
 	switch (header[0x148])
 	{
 		case 0x00: //ROM ONLY
-			_romSpace.resize(0x02);
-			fread(&_romSpace[0x00][0x00], 1, 0x4000, rom);
-			fread(&_romSpace[0x01][0x00], 1, 0x4000, rom);
-			return *this;
+			return std::make_unique<cart>(cart(rom, 0));
 		case 0x01 ... 0x03: //MBC1
-			return mbc1(romSizetab(header[0x148]), ramSizetab(header[0x149]), rom);
+			return std::make_unique<mbc1>(mbc1(romSizetab(header[0x148]), ramSizetab(header[0x149]), rom));
 		case 0x04:
 			break ;
 		case 0x05 ... 0x06: //MBC2
-			return mbc2(romSizetab(header[0x148]), ramSizetab(header[0x149]), rom);
+			return std::make_unique<mbc2>(mbc2(romSizetab(header[0x148]), ramSizetab(header[0x149]), rom));
 		case 0x07:
 			break;
 		case 0x08 ... 0x09: //ROM+RAM/ROM+RAM+BATTERY
-			_romSpace.resize(0x02);
-			fread(&_romSpace[0x00][0x00], 1, 0x4000, rom);
-			fread(&_romSpace[0x01][0x00], 1, 0x4000, rom);
-			_ramSpace.resize(ramSizetab(header[0x149]));
-			return *this;
+			return std::make_unique<cart>(cart(rom, ramSizetab(header[0x149])));
 		case 0x0A:
 			break;
 		case 0x0B ... 0x0D: //MMM01/MMM01+RAM/MMM01+RAM+BATTERY
@@ -115,11 +116,11 @@ cart	cart::loadCart(char *fname)
 		case 0x0E:
 			break;
 		case 0x0F ... 0x13: //MBC3+TIMER+BATTERY/MBC3+TIMER+RAM+BATTERY/MBC3/MBC3+RAM/MBC3+RAM+BATTERY
-			return mbc3(romSizetab(header[0x148]), ramSizetab(header[0x149]), rom);
+			return std::make_unique<mbc3>(mbc3(romSizetab(header[0x148]), ramSizetab(header[0x149]), rom));
 		case 0x14 ... 0x18:
 			break;
 		case 0x19 ... 0x1E: //MBC5/MBC5+RAM/MBC5+RAM+BATTERY/MBC5+RUMBLE/MBC5+RUMBLE+RAM/MBC5+RUMBLE+RAM+BATTERY
-			return mbc5(romSizetab(header[0x148]), ramSizetab(header[0x149]), rom);
+			return std::make_unique<mbc5>(mbc5(romSizetab(header[0x148]), ramSizetab(header[0x149]), rom));
 		case 0x20: //MBC6
 //			return mbc6(romSizetab(header[0x148]), ramSizetab(header[0x149]), rom);
 		case 0x22: //MBC7+SENSOR+RUMBLE+RAM+BATTERY
@@ -134,7 +135,7 @@ cart	cart::loadCart(char *fname)
 		break;
 	}
 	throw "Error: unsupported MBC";
-	return *this;
+	return NULL;
 }
 
 void	cart::writeTo(unsigned short addr, unsigned char val)

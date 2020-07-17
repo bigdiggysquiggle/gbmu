@@ -64,6 +64,7 @@ class cpu {
 		cpu(std::shared_ptr<mmu>);
 		std::shared_ptr<mmu>	_mmu;//change to shared pointer
 		void			interrupt_check(void);
+		void			reset(char *);
 		void			setInterrupt(unsigned char);
 		unsigned char	opcode_parse(unsigned char);
 		unsigned char	opcode_parse(void);

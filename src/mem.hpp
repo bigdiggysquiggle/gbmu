@@ -51,7 +51,7 @@ class mmu {
 		//				FF70 and FF4F cgb modes
 
 	private:
-		cart			_rom;
+		std::unique_ptr<cart>	_rom;
 		std::vector<std::array<unsigned char, 0x2000>>	_vram;
 		unsigned char	_wram0[0x1000];
 		std::vector<std::array<unsigned char, 0x1000>>	_wram1;
@@ -59,6 +59,8 @@ class mmu {
 		unsigned char	_IOReg[0x80];
 		unsigned char	_hram[0x80];
 		unsigned char	_IE;
+		unsigned		_clock;
+		unsigned		_tac0;
 
 		void	_IOwrite(unsigned short, unsigned char);
 };

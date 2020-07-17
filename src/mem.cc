@@ -261,6 +261,8 @@ mmu::mmu()
 	for (unsigned char io = 0; io < 0x7F; io++)
 		_IOReg[io] = _IOmasks[io].write;
 	_IOReg[0x00] |= 0x0F;
+	_clock = 0;
+	_tac0 = 0;
 //	while (init_tab[++i].addr)
 //		writeTo(init_tab[i].addr, init_tab[i].val);
 // TODO: hand code the nintendo logo tiles
@@ -309,7 +311,9 @@ void mmu::pollInput(void)
 
 void mmu::loadCart(char *filename)
 {
-	_rom.loadCart(filename);
+	cart _cart;
+	_IOReg[0x50] = 0xFE;
+	_rom = _cart.loadCart(filename);
 }
 
 //1 VBlank 2 STAT 4 Timer 8 Serial 16 Joypad
@@ -334,8 +338,10 @@ void	mmu::setINTS(void)
 		_IOReg[0x41] &= ~(1 << 2);
 	if (((LY == LYC && _IOReg[0x41] & (1 << 6)) || (mode == 2 && _IOReg[0x41] & (1 << 5)) || (mode == 1 && (_IOReg[0x41] & (1 << 4) || _IOReg[0x41] & (1 << 5))) || (mode == 0 && _IOReg[0x41] & (1 << 3))))
 		_IOReg[0x0F] |= 0x02;
-//	if ((_IOReg[0x00] & 0x0F) != 0x0F) //joypad interrupt
-//		_IOReg[0x0F] |= (1 << 4);
+	if ((_IOReg[0x00] & 0x0F) != 0x0F) //joypad interrupt
+		_IOReg[0x0F] |= (1 << 4);
+//	if (_IOReg[0x44] == 144)
+//		_IOReg[0x0F] |= 1;
 }
 
 //STAT is 0xFF41
@@ -348,7 +354,7 @@ unsigned char	mmu::PaccessAt(unsigned short addr)
 //	printf("PAccessing 0x%04x\n", addr);
 	unsigned char	val;
 	if (addr <= 0x7FFF || (0xA000 <= addr && addr <= 0xBFFF))
-		val = _rom.readFrom(addr);
+		val = _rom->readFrom(addr);
 	if (0xE000 <= addr && addr <= 0xFDFF)
 		val = 0xFF;
 	else if (0x8000 <= addr && addr <= 0x9FFF)
@@ -383,8 +389,8 @@ unsigned char	mmu::accessAt(unsigned short addr)
 		if ((addr < 0x100) && !(_IOReg[0x50] & 0x01))
 			val = _booter[addr];
 		else
-			val = _rom.readFrom(addr);
-		//val = ((addr < 0x100) && (_IOReg[0x50] == 0x01)) ?_rom.readFrom(addr) : _booter[addr];
+			val = _rom->readFrom(addr);
+		//val = ((addr < 0x100) && (_IOReg[0x50] == 0x01)) ?_rom->readFrom(addr) : _booter[addr];
 	}
 	else if (0xE000 <= addr && addr <= 0xFDFF)
 		val = 0xFF;
@@ -467,7 +473,7 @@ void	mmu::writeTo(unsigned short addr, unsigned char msg)
 //	if (0x8000 <= addr && addr <= 0x9FFF)
 //		printf("write 0x%02hhx to 0x%04hx\n\n", msg, addr);
 	if ((_IOReg[0x50] & 1) && (addr <= 0x7FFF || (0xA000 <= addr && addr <= 0xBFFF)))
-		_rom.writeTo(addr, msg);
+		_rom->writeTo(addr, msg);
 	else if (0x8000 <= addr && addr <= 0x9FFF)
 	{
 		if ((_IOReg[0x41] & 0x03) < 0x03)
@@ -516,20 +522,32 @@ void	mmu::timerInc(unsigned cycles)
 	//	10: 64
 	//	11: 256
 	unsigned char tac = _IOReg[0x07];
-	unsigned timatab[] = {1024, 16, 64, 256};
-	if (!(cycles % 256))
+	unsigned timatab[]= {
+		4096, 262144, 65536, 16384};
+	_clock += cycles;
+	_tac0 += cycles;
+	if (_clock >= 16384)
+	{
+//		printf("Clock inc\n");
 		_IOReg[0x04] += 1;
+		_clock -= 16384;
+	}
 	if (!(tac & (1 << 2)))
 		return ;
 	tac &= 0x03;
-	if (!(cycles % timatab[tac]))
+	if (_tac0 >= timatab[tac])
 	{
 		if (_IOReg[0x05] == 0xFF)
 		{
 			_IOReg[0x0F] |= (1 << 2);
 			_IOReg[0x05] = _IOReg[0x06];
+//			printf("INT set\n");
 		}
 		else
+//		{printf("Timer inc\n");
 			_IOReg[0x05] += 1;
+//		}
+		while (_tac0 >= timatab[tac])
+			_tac0 -= timatab[tac];
 	}
 }

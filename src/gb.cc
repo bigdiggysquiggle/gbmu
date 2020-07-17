@@ -59,8 +59,8 @@ int main(int ac, char **av)
 	while (quit == false)
 	{
 		memunit->pollInput();
-		memunit->timerInc(cycles + 1);
 		cyc = processor.opcode_parse();
+		memunit->timerInc(cyc);
 		if ((cyc >= graphics._cycles && graphics.frameRender(cyc)) || graphics.offcheck(cyc))
 		{
 			SDL_UpdateTexture(frame, NULL, graphics.pixels, (160 * 4));

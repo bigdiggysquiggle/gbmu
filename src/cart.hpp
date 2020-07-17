@@ -51,9 +51,10 @@
 class cart {
 	public:
 		cart();
-		cart	loadCart(char *fname);
-		virtual void writeTo(unsigned short addr, unsigned char val);
-		virtual unsigned char readFrom(unsigned short addr);
+		cart(FILE *, unsigned short);
+		std::unique_ptr<cart>	loadCart(char *fname);
+		virtual void writeTo(unsigned short, unsigned char);
+		virtual unsigned char readFrom(unsigned short);
 		unsigned char	GBbit;
 	protected:
 //		std::vector<unsigned char[0x4000]> _romSpace;
