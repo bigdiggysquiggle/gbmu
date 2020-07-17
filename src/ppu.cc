@@ -89,7 +89,6 @@ void	ppu::VBlank(unsigned char mode)
 
 void	ppu::printSprite(unsigned char sprite[16], unsigned char attr[4], unsigned char lcdc)
 {
-	printf("sprite x %u y %u\n", attr[1], attr[0]);
 	if (attr[1] >= 160)
 		return ;
 	unsigned char obp = attr[3] & (1 << 4) ? _mmu->PaccessAt(0xFF49) : _mmu->PaccessAt(0xFF48);
@@ -101,13 +100,13 @@ void	ppu::printSprite(unsigned char sprite[16], unsigned char attr[4], unsigned 
 	unsigned char bgp = _mmu->PaccessAt(0xFF47);
 	if (!(attr[3] & (1 << 6)))
 	{
-		lower = sprite[2 * ((_y + attr[0]) % 8)];
-		upper = sprite[(2 * ((_y + attr[0]) % 8)) + 1];
+		lower = sprite[2 * (_y - attr[0])];
+		upper = sprite[(2 * (_y - attr[0])) + 1];
 	}
 	else
 	{
-		lower = sprite[15 - (2 *((_y + attr[0]) % 8))];
-		upper = sprite[14 - (2 * ((_y + attr[0]) % 8))];
+		lower = sprite[15 - (2 *(_y - attr[0]))];
+		upper = sprite[14 - (2 * (_y - attr[0]))];
 	}
 	unsigned char i = -1;
 	unsigned char c;
@@ -174,16 +173,24 @@ void	ppu::readOAM(unsigned char lcdc)
 {
 	unsigned short	addr = 0xFE00;
 	unsigned char	count = 0;
-	unsigned char	ssize = (lcdc >> 2) & 1;
+	unsigned char	ssize = (lcdc >> 2) & 1 ? 16 : 8;
 	while (addr < 0xFE9F && count < 10)
 	{
-		spriteattr[count][0] = _mmu->PaccessAt(addr) - 16;
-		if (0 <= spriteattr[count][0] && spriteattr[count][0] <= 154 && _y >= spriteattr[count][0] && spriteattr[count][0] + 8 + (8 * ssize) >= _y)
+		spriteattr[count][0] = _mmu->PaccessAt(addr);
+		if (0 < spriteattr[count][0] && spriteattr[count][0] <= 160)
 		{
-			spriteattr[count][1] = _mmu->PaccessAt(addr + 1) - 8;
-			spriteattr[count][2] = _mmu->PaccessAt(addr + 2);
-			spriteattr[count][3] = _mmu->PaccessAt(addr + 3);
-			count++;
+			spriteattr[count][0] -= 16;
+			//because of the way I handled hblanking I need to
+			//compare against _y + 1 for this function so it
+			//will be on the correct scanline when it prints
+			//the sprite
+			if (spriteattr[count][0] <= (_y + 1) && (_y + 1) < spriteattr[count][0] + ssize)
+			{
+				spriteattr[count][1] = _mmu->PaccessAt(addr + 1) - 8;
+				spriteattr[count][2] = _mmu->PaccessAt(addr + 2);
+				spriteattr[count][3] = _mmu->PaccessAt(addr + 3);
+				count++;
+			}
 		}
 		addr += 4;
 	}
@@ -218,7 +225,6 @@ void	ppu::refreshTiles()
 	mapaddr = 0x8000;
 	while (mapaddr < 0x97FF)//since mapaddr increments several times between each check this condition is fine
 	{
-//		printf("Refresh tile %u\n", tile);
 		for (line = 0; line < 8; line++)//tiles are 2 bytes per line
 		{
 			unsigned char lower = _mmu->accessAt(mapaddr++);
@@ -228,9 +234,7 @@ void	ppu::refreshTiles()
 			while (i--)
 			{
 				tiles[tile][line][pix++] = (((lower >> i) & 1) + (((upper >> i) & 1) << 1));
-//				printf("%02x", tiles[tile][line][pix - 1]);
 			}
-//			printf("\n");
 		}
 		tile++;
 	}
@@ -256,16 +260,10 @@ void	ppu::getTiles9(unsigned short addr, unsigned char x, unsigned char y, unsig
 	unsigned char pix = 0;
 	while (pix + dis < 160)
 	{
-//		printf("pix %u %u\n", pix, _y);
 		for (unsigned char tpix = 0; tpix < 8; tpix++)
-		{
-//			printf("%02u", tiles[tab[(pix + tpix + x)/8]][y % 8][tpix]);
 			pixels[pix + dis + tpix + (_y * 160)] = bgc[tiles[256 + tab[(pix + tpix + x)/8]][y % 8][tpix]];
-		}
-//		printf("\n");
 		pix += 8;
 	}
-//	printf("\n");
 }
 
 //factor in window drawing
@@ -277,7 +275,6 @@ void	ppu::getTiles8(unsigned short addr, unsigned char x, unsigned char y, unsig
 		tab[i] = _mmu->accessAt(addr++);
 	addr -= 32;
 	unsigned char bgp = _mmu->PaccessAt(0xFF47);
-//	sf::Color bgc[] = {
 	unsigned bgc[] = {
 		ctab[bgp & 3], ctab[(bgp >> 2) & 3],
 		ctab[(bgp >> 4) & 3], ctab[(bgp >> 6)]};
@@ -288,7 +285,6 @@ void	ppu::getTiles8(unsigned short addr, unsigned char x, unsigned char y, unsig
 	unsigned char pix = 0;
 	while (pix + dis < 160)
 	{
-//		printf("pix %u\n", pix);
 		for (unsigned char tpix = 0; tpix < 8; tpix++)
 		{
 			pixels[pix + dis + tpix + (_y * 160)] = bgc[tiles[tab[(pix + tpix + x)/8]][y % 8][tpix]];
@@ -365,13 +361,11 @@ int		ppu::frameRender(unsigned char cyc)
 				y++;
 	  		if (y == 144)
 			{
-//				printf("mode 1 vblank\n\n");
 				_y = 144;
 				VBlank(mode);
 				_mmu->writeTo(0xFF44, y);
 				return 1;
 			}
-//			printf("mode 2 oam\n");
 			mode |= 0x02;
 			_mmu->writeTo(0xFF44, y);
 			readOAM(lcdc);
@@ -383,20 +377,17 @@ int		ppu::frameRender(unsigned char cyc)
 				_cycles = cyc - _cycles;
 				_cycles += 456;
 				_y++;
-//				printf("y %u\n", _y);
 				mode |= 0x01;
 				_mmu->writeTo(0xFF44, (_y == 154) ? 0 : _y);
 			}
 			else
 			{
-//				printf("mode 2 oam\n");
 				mode |= 0x02;
 				readOAM(lcdc);
 				_cycles += 80;
 			}
 			break;
 		case 2://move to mode 3
-//			printf("mode 3 oam/vram\n");	
 			mode |= 0x03;
 			if (y != _y || (lcdc & 1 << 5 && !(LCDC & 1 << 5)))
 			{
