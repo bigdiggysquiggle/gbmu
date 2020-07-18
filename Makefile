@@ -14,7 +14,7 @@ NAME = gbmu
 
 SRCS = ./src/*.cc
 
-COMP = g++ -w -O3
+COMP = g++ -O3
 
 L = -lSDL2
 

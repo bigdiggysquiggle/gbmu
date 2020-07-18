@@ -4,8 +4,8 @@ typedef struct s_debugmsg	t_debugmsg;
 
 struct	s_debugmsg
 {
-	char			*op;
-	char			*arg;
+	const char	*op;
+	const char	*arg;
 };
 
 t_debugmsg	msgtab[] = {

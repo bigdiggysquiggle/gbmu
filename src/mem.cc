@@ -442,8 +442,10 @@ unsigned char	mmu::accessAt(unsigned short addr)
 
 void	mmu::STATupdate(unsigned char mode)
 {
-	_IOReg[0x41] &= 0xF8;
-	_IOReg[0x41] += (mode & 0x03);
+	unsigned char stat = _IOReg[0x41];
+	stat &= 0xF8;
+	stat += (mode & 0x03);
+	_IOReg[0x41] = stat;
 }
 
 void	mmu::_IOwrite(unsigned short addr, unsigned char msg)

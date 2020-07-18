@@ -94,8 +94,8 @@ std::unique_ptr<cart>	cart::loadCart(char *fname)
 	rewind(rom);
 	GBbit = header[0x143];
 	printf("Cart %.16s\n", &header[0x134]);
-	printf("Romsize byte %04hhx Ramsize byte %04hhx\n\n", header[0x148], header[0x149]);
-	switch (header[0x148])
+	printf("MBC 0x%02hhx Romsize byte 0x%02hhx Ramsize byte 0x%02hhx\n\n", header[0x147], header[0x148], header[0x149]);
+	switch (header[0x147])
 	{
 		case 0x00: //ROM ONLY
 			return std::make_unique<cart>(cart(rom, 0));
@@ -157,6 +157,7 @@ unsigned char	cart::readFrom(unsigned short addr)
 
 mbc1::mbc1(unsigned romBanks, unsigned ramBanks, FILE *rom)
 {
+	printf("MBC1\n");
 	_romSpace.resize(romBanks ? romBanks : 2);
 	_ramSpace.resize(ramBanks);
 	for (unsigned i = 0x00; i < romBanks; i++)
@@ -238,11 +239,15 @@ unsigned char	mbc1::readFrom(unsigned short addr)
 
 mbc2::mbc2(unsigned romBanks, unsigned ramBanks, FILE *rom)
 {
+	printf("MBC2\n");
 	_romSpace.resize(romBanks ? romBanks : 2);
 	_ramSize = 0x200;
 	for (unsigned i = 0x00; i < romBanks; i++)
 		fread(&_romSpace[i][0], 1, 0x4000, rom);
 	fclose(rom);
+//	for (unsigned i = 0x00; i < romBanks; i++)
+//		for (unsigned j = 0x00; j < 0x4000; j++)
+//			printf("%c", _romSpace[i][j]);
 }
 
 void	mbc2::writeTo(unsigned short addr, unsigned char val)
@@ -297,6 +302,7 @@ unsigned char	mbc2::_ramRead(unsigned short addr)
 
 mbc3::mbc3(unsigned romBanks, unsigned ramBanks, FILE *rom)
 {
+	printf("MBC3\n");
 	_romSpace.resize(romBanks ? romBanks : romBanks + 2);
 	_ramSpace.resize(ramBanks);
 	_timeLatch = 0xFF;
@@ -397,6 +403,7 @@ unsigned char	mbc3::readFrom(unsigned short addr)
 
 mbc5::mbc5(unsigned romBanks, unsigned ramBanks, FILE *rom)
 {
+	printf("MBC5\n");
 	_romSpace.resize(romBanks ? romBanks : 2);
 	_ramSpace.resize(ramBanks);
 	for (unsigned i = 0x00; i < romBanks; i++)

@@ -168,29 +168,28 @@ void	ppu::printSprites8(unsigned char lcdc)
 void	ppu::readOAM(unsigned char lcdc)
 {
 	unsigned short	addr = 0xFE00;
-	unsigned char	count = 0;
+	spritecount = 0;
 	unsigned char	ssize = (lcdc >> 2) & 1 ? 16 : 8;
-	while (addr < 0xFE9F && count < 10)
+	while (addr < 0xFE9F && spritecount < 10)
 	{
-		spriteattr[count][0] = _mmu->PaccessAt(addr);
-		if (0 < spriteattr[count][0] && spriteattr[count][0] <= 160)
+		spriteattr[spritecount][0] = _mmu->PaccessAt(addr);
+		if (0 < spriteattr[spritecount][0] && spriteattr[spritecount][0] <= 160)
 		{
-			spriteattr[count][0] -= 16;
+			spriteattr[spritecount][0] -= 16;
 			//because of the way I handled hblanking I need to
 			//compare against _y + 1 for this function so it
 			//will be on the correct scanline when it prints
 			//the sprite
-			if (spriteattr[count][0] <= (_y + 1) && (_y + 1) < spriteattr[count][0] + ssize)
+			if (spriteattr[spritecount][0] <= (_y + 1) && (_y + 1) < spriteattr[spritecount][0] + ssize)
 			{
-				spriteattr[count][1] = _mmu->PaccessAt(addr + 1) - 8;
-				spriteattr[count][2] = _mmu->PaccessAt(addr + 2);
-				spriteattr[count][3] = _mmu->PaccessAt(addr + 3);
-				count++;
+				spriteattr[spritecount][1] = _mmu->PaccessAt(addr + 1) - 8;
+				spriteattr[spritecount][2] = _mmu->PaccessAt(addr + 2);
+				spriteattr[spritecount][3] = _mmu->PaccessAt(addr + 3);
+				spritecount++;
 			}
 		}
 		addr += 4;
 	}
-	spritecount = count;
 }
 
 void	ppu::readSprites(unsigned char lcdc)
