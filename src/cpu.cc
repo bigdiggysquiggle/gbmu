@@ -421,21 +421,23 @@ void	cpu::inc(unsigned char *reg)
 {
 	unsigned char val;
 	if (reg)
-	{
 		val = *reg;
-		*reg += 1;
-	}
 	else
-	{
 		val = _mmu->accessAt(_registers.hl);
-		_mmu->writeTo(_registers.hl, val + 1);
-	}
-	_registers.f = val + 1 ? _registers.f & ~(bitflags::z) : _registers.f | bitflags::z; 
+	val++;
+	if (!val)
+		_registers.f |= bitflags::z;
+	else
+		_registers.f &= ~(bitflags::z);
 	if ((((val & 0x0F) + (0x01)) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
 	_registers.f &= ~(bitflags::n);
+	if (reg)
+		*reg = val;
+	else
+		_mmu->writeTo(_registers.hl, val);
 }
 
 void	cpu::inc(unsigned short *regp)
@@ -447,21 +449,23 @@ void	cpu::dec(unsigned char *reg)
 {
 	unsigned char val;
 	if (reg)
-	{
 		val = *reg;
-		*reg = *reg - 1;
-	}
 	else
-	{
 		val = _mmu->accessAt(_registers.hl);
-		_mmu->writeTo(_registers.hl, val - 1);
-	}
-	_registers.f = val - 1 ? _registers.f & ~(bitflags::z) : _registers.f | bitflags::z; 
+	val--;
+	if (!val)
+		_registers.f |= bitflags::z;
+	else
+		_registers.f &= ~(bitflags::z);
 	if ((((val & 0x0F) - (0x01)) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
 	_registers.f |= bitflags::n;
+	if (reg)
+		*reg = val;
+	else
+		_mmu->writeTo(_registers.hl, val);
 }
 
 void	cpu::dec(unsigned short *regp)
@@ -1410,7 +1414,7 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 	interrupt_check();
 	unsigned char opcode = _mmu->accessAt(_registers.pc);
 //	if (debug == true)
-//	printf("\t\tcurrent pc: 0x%04x\n", _registers.pc);
+	printf("\t\tcurrent pc: 0x%04x\n", _registers.pc);
 	unsigned char ftab[4];
 	_registers.pc += haltcheck;
 	ftab[0] = _registers.f & bitflags::z ? 0 : 1;
@@ -1437,13 +1441,13 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 		&_registers.hl,
 		&_registers.af};
 //	if (debug == true)
-//		printf("\tnz %d z %d nc %d c %d\n\n", ftab[0], ftab[1], ftab[2], ftab[3]);
+		printf("\tnz %d z %d nc %d c %d\n\n", ftab[0], ftab[1], ftab[2], ftab[3]);
 	if (opcode == 0xCB)
 	{
 		opcode = _mmu->accessAt(_registers.pc++);
 		cyc = _cbtab[opcode];
 //		if (debug == true)
-//			debug_print(opcode, 1, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
+			debug_print(opcode, 1, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
 		switch(X(opcode))
 		{
 			case 0:
@@ -1465,7 +1469,7 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 	}
 	cyc = cycletab[opcode];
 //	if (debug == true)
-//		debug_print(opcode, 0, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
+		debug_print(opcode, 0, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
 	if (!opcode)
 		return cyc;
    if (opcode < 0x3F && ((opcode & 0x0F) == 0x06 || (opcode & 0x0F) == 0x0E))//LD r, n
@@ -1618,8 +1622,7 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 	}
 	if (_mmu->_oamtime)
 		_mmu->_oamtime = (cyc > _mmu->_oamtime) ? 0 : _mmu->_oamtime - cyc;
-	return cyc;
-	unsigned char c;
+//	unsigned char c;
 //	if (_registers.pc >= 0x36C && _registers.pc <= 0x36F)
 //		debug = true;
 //	if (debug)
@@ -1628,4 +1631,5 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 //		read(0, &c, 1);
 //	}
 //	usleep(100000);
+	return cyc;
 }
