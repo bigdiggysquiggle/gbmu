@@ -429,7 +429,7 @@ void	cpu::inc(unsigned char *reg)
 		_registers.f |= bitflags::z;
 	else
 		_registers.f &= ~(bitflags::z);
-	if ((((val & 0x0F) + (0x01)) & 0x10) == 0x10)
+	if (((val & 0x0F) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
@@ -457,7 +457,7 @@ void	cpu::dec(unsigned char *reg)
 		_registers.f |= bitflags::z;
 	else
 		_registers.f &= ~(bitflags::z);
-	if ((((val & 0x0F) - (0x01)) & 0x10) == 0x10)
+	if (((val & 0x0F) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
@@ -593,7 +593,7 @@ void	cpu::rra(void)
 {
 	unsigned char cb = (_registers.f >> 4) & 0x01;
 	_registers.f = (_registers.a & 0x01) ? (_registers.f | bitflags::cy) : (_registers.f & ~(bitflags::cy));
-	_registers.a = cb | (_registers.a >> 1);
+	_registers.a = (cb << 7) | (_registers.a >> 1);
 	_registers.f &= ~(bitflags::n + bitflags::h + bitflags::z);
 }
 
@@ -655,7 +655,7 @@ void	cpu::rr(unsigned char *reg)
 	unsigned char val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	_registers.f = (val & 0x01) ? (_registers.f | bitflags::cy) : (_registers.f & ~(bitflags::cy));
-	val = (val >> 1) | cb;
+	val = (val >> 1) | (cb << 7);
 	if (!val)
 		_registers.f |= bitflags::z;
 	else

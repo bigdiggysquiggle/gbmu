@@ -87,7 +87,7 @@ class cart {
 //	- when 0 bank2 affects 0x4000-0x7FFF
 //	- when 1 0x0000-0x3FFF, 0x4000-0x7FFF, 0xA000-0xBFFF
 
-//implemented multicart later
+//implement multicart later
 class mbc1 : virtual public cart{
 	//max 2MB ROM and/or 32KB RAM
 	public:

@@ -162,6 +162,7 @@ mbc1::mbc1(unsigned romBanks, unsigned ramBanks, FILE *rom)
 	_ramSpace.resize(ramBanks);
 	for (unsigned i = 0x00; i < romBanks; i++)
 		fread(&_romSpace[i][0], 1, 0x4000, rom);
+	_bank1 = 1;
 	fclose(rom);
 }
 
@@ -170,11 +171,11 @@ void			mbc1::writeTo(unsigned short addr, unsigned char val)
 	if (0x0000 <= addr && addr <= 0x1FFF)
 		_ramg = val & 0x0F;
 	else if (0x2000 <= addr && addr <= 0x3FFF)
-		_bank1 = val & 0x1F ? val : 1;
+		_bank1 = (val & 0x1F) ? (val & 0x1F) : 1;
 	else if (0x4000 <= addr && addr <= 0x5FFF)
-		_bank2 = (val >> 5) & 0x03;
+		_bank2 = ((val >> 5) & 0x03);
 	else if (0x6000 <= addr && addr <= 0x7FFF)
-		_mode = val & 0x01;
+		_mode = (val & 0x01);
 	else if (0xA000 <= addr && addr <= 0xBFFF)
 		_ramWrite(addr - 0xA000, val);
 }
@@ -212,7 +213,7 @@ unsigned char	mbc1::_rombankRead(unsigned short addr)
 	unsigned char banknum = 0;
 	if (addr >= 0x4000)
 	{
-		banknum = _bank1 | (_bank2 << 5);
+		banknum = _bank1 | (!_mode ? (_bank2 << 5) : 0);
 		addr -= 0x4000;
 	}
 	return (_romSpace[banknum][addr]);
@@ -245,6 +246,7 @@ mbc2::mbc2(unsigned romBanks, unsigned ramBanks, FILE *rom)
 	for (unsigned i = 0x00; i < romBanks; i++)
 		fread(&_romSpace[i][0], 1, 0x4000, rom);
 	fclose(rom);
+	_romg = 1;
 //	for (unsigned i = 0x00; i < romBanks; i++)
 //		for (unsigned j = 0x00; j < 0x4000; j++)
 //			printf("%c", _romSpace[i][j]);
