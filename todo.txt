@@ -3,3 +3,5 @@ fix my memory bank controller
 have save states first export cpu variables, then append with all the ram info from the mmu
 
 fix sprite reading/printing. determine where the bug is and fix it
+
+blargg cpu test rom 01 at c31f is where my push fucks up
