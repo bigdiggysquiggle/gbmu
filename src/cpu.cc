@@ -33,6 +33,7 @@ cpu::cpu(std::shared_ptr<mmu> unit) : _mmu(unit)
 	_registers.hl = 0x00;
 	_registers.pc = 0x00;
 	_registers.sp = 0x00;
+	_halt = false;
 }
 
 unsigned char	nLogo[]={
@@ -57,10 +58,10 @@ unsigned char	nLogo[]={
 
 }*/
 
-void	cpu::interrupt_check(void)
+unsigned char	cpu::interrupt_check(void)
 {
 	int i = 0;
-	if (_ime)
+	if (_halt == true || _ime)
 	{
 		unsigned short	targets[] = {
 			0x40, 0x48, 0x50, 0x58, 0x60};
@@ -72,9 +73,23 @@ void	cpu::interrupt_check(void)
 		{
 			_mmu->writeTo(0xFF0F, intfl - c);
 //			printf("jump to 0x%02x\n", targets[i]);
-			call(targets[i]);
+			if (_ime)
+			{
+				call(targets[i]);
+				if (_halt == true)
+				{
+					_halt = false;
+					return opcode_parse(1);
+				}
+			}
+		}
+		if (_halt == true)
+		{
+			_halt = false;
+			return opcode_parse(0);
 		}
 	}
+	return (0);
 }
 
 // maybe write wrapper function to access mmu based on mode
@@ -192,15 +207,15 @@ void	cpu::push(unsigned short *regp)
 {
 	union address val;
 	val.addr = *regp;
-	_mmu->writeTo(_registers.sp--, val.n2);
-	_mmu->writeTo(_registers.sp--, val.n1);
+	_mmu->writeTo(--_registers.sp, val.n2);
+	_mmu->writeTo(--_registers.sp, val.n1);
 }
 
 void	cpu::pop(unsigned short *regp)
 {
 	union address val;//endian is gonna kill me I swear
-	val.n1 = _mmu->accessAt(++_registers.sp);
-	val.n2 = _mmu->accessAt(++_registers.sp);
+	val.n1 = _mmu->accessAt(_registers.sp++);
+	val.n2 = _mmu->accessAt(_registers.sp++);
 	*regp = val.addr;
 }
 
@@ -533,16 +548,7 @@ void	cpu::scf(void)
 
 void	cpu::halt(void)//check if halt resumes execution regargless or waits for an interrupt flag
 {
-	unsigned char IF = _mmu->accessAt(0xFF0F) & 0x1F;
-	unsigned char EI = _mmu->accessAt(0xFFFF) & 0x1F;
-	if (this->_ime)
-		while (!(IF & EI))
-		{
-			if ((_mmu->accessAt(0xFF00) & 0xFF) != 0xFF)//more than this, check how input interrupts are generated
-				setInterrupt(0x1 << 4);
-		}
-	else
-		opcode_parse(0);
+	_halt = true;
 }
 
 void	cpu::stop(void)//check p1 bits and p1 line
@@ -817,8 +823,8 @@ void	cpu::call(unsigned short addr)
 {
 	union address val;
 	val.addr = _registers.pc;
-	_mmu->writeTo(_registers.sp--, val.n2);
-	_mmu->writeTo(_registers.sp--, val.n1);
+	_mmu->writeTo(--_registers.sp, val.n2);
+	_mmu->writeTo(--_registers.sp, val.n1);
 	_registers.pc = addr;
 }
 
@@ -833,8 +839,8 @@ void	cpu::call(unsigned short addr, unsigned char ye)
 	{
 		union address val;
 		val.addr = _registers.pc;
-		_mmu->writeTo(_registers.sp--, val.n2);
-		_mmu->writeTo(_registers.sp--, val.n1);
+		_mmu->writeTo(--_registers.sp, val.n2);
+		_mmu->writeTo(--_registers.sp, val.n1);
 		_registers.pc = addr;
 	}
 }
@@ -843,8 +849,8 @@ void	cpu::rst(unsigned short addr)
 {
 	union address val;
 	val.addr = _registers.pc;
-	_mmu->writeTo(_registers.sp--, val.n2);
-	_mmu->writeTo(_registers.sp--, val.n1);
+	_mmu->writeTo(--_registers.sp, val.n2);
+	_mmu->writeTo(--_registers.sp, val.n1);
 	_registers.pc = addr;
 //	printf("rst to %hx\n", addr);
 //	exit(1);
@@ -853,8 +859,8 @@ void	cpu::rst(unsigned short addr)
 void	cpu::ret(void)
 {
 	union address addr;
-	addr.n1 = _mmu->accessAt(++_registers.sp);
-	addr.n2 = _mmu->accessAt(++_registers.sp);
+	addr.n1 = _mmu->accessAt(_registers.sp++);
+	addr.n2 = _mmu->accessAt(_registers.sp++);
 	_registers.pc = addr.addr;
 }
 
@@ -868,8 +874,8 @@ void	cpu::ret(unsigned char ye)
 	if (ye)
 	{
 		union address addr;
-		addr.n1 = _mmu->accessAt(++_registers.sp);
-		addr.n2 = _mmu->accessAt(++_registers.sp);
+		addr.n1 = _mmu->accessAt(_registers.sp++);
+		addr.n2 = _mmu->accessAt(_registers.sp++);
 		_registers.pc = addr.addr;
 	}
 }
@@ -877,8 +883,8 @@ void	cpu::ret(unsigned char ye)
 void	cpu::reti(void)
 {
 	union address addr;
-	addr.n1 = _mmu->accessAt(++_registers.sp);
-	addr.n2 = _mmu->accessAt(++_registers.sp);
+	addr.n1 = _mmu->accessAt(_registers.sp++);
+	addr.n2 = _mmu->accessAt(_registers.sp++);
 	_registers.pc = addr.addr;
 	this->_ime = 1;
 //	_mmu->writeTo(0xFFFF, 0x1F);
@@ -1409,9 +1415,11 @@ unsigned char _cbtab[] ={
 
 unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 {
-	unsigned char cyc = 0;
+	unsigned char cyc;
 	_mmu->setINTS();
-	interrupt_check();
+	cyc = interrupt_check();
+	if (_halt == true)
+		return 0;
 	unsigned char opcode = _mmu->accessAt(_registers.pc);
 //	if (debug == true)
 	printf("\t\tcurrent pc: 0x%04x\n", _registers.pc);
@@ -1445,7 +1453,7 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 	if (opcode == 0xCB)
 	{
 		opcode = _mmu->accessAt(_registers.pc++);
-		cyc = _cbtab[opcode];
+		cyc += _cbtab[opcode];
 //		if (debug == true)
 			debug_print(opcode, 1, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
 		switch(X(opcode))
@@ -1465,9 +1473,10 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 			default:
 				exit(1);
 		}
+		_registers.f &= 0xF0;
 		return cyc;
 	}
-	cyc = cycletab[opcode];
+	cyc += cycletab[opcode];
 //	if (debug == true)
 		debug_print(opcode, 0, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
 	if (!opcode)
@@ -1631,5 +1640,6 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 //		read(0, &c, 1);
 //	}
 //	usleep(100000);
+	_registers.f &= 0xF0;
 	return cyc;
 }

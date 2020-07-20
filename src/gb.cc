@@ -68,8 +68,8 @@ int main(int ac, char **av)
 			SDL_RenderPresent(render);
 		}
 		cycles += cyc;
-		if (cycles >= 419304)
-			cycles -= 419304;
+		if (cycles >= 4194304)
+			cycles -= 4194304;
 		if (SDL_PollEvent(&e) != 0 && (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)))
 				quit = true;
 	}

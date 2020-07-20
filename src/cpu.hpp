@@ -63,7 +63,7 @@ class cpu {
 	public:
 		cpu(std::shared_ptr<mmu>);
 		std::shared_ptr<mmu>	_mmu;//change to shared pointer
-		void			interrupt_check(void);
+		unsigned char	interrupt_check(void);
 		void			reset(char *);
 		void			setInterrupt(unsigned char);
 		unsigned char	opcode_parse(unsigned char);
@@ -74,6 +74,7 @@ class cpu {
 	private:
 		struct registers		_registers;
 		unsigned char	_inCycles;
+		bool			_halt;
 //		unsigned char	*_regtab(unsigned char);
 //		unsigned short	*_pairtabddss(unsigned char);
 //		unsigned short	*_pairtabqq(unsigned char);

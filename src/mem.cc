@@ -513,25 +513,25 @@ void	mmu::writeTo(unsigned short addr, unsigned char msg)
 // cpu speed 4194304
 void	mmu::timerInc(unsigned cycles)
 {
-	//FF04 DIV increments 16384 times a second (affected by double speed
+	//FF04 DIV increments 16384 times a second (every 256 cycles, affected by double speed)
 	//FF05 TIMA increments by specified TAC frequency (load from TMA and interrupt when overflow)
 	//FF06 TMA loads into TIMA on overflow
 	//FF07 TAC bit 2 start/stop (div always counts)
 	// bits 1+0:
-	//	00: 4096
-	//	01: 16
-	//	10: 64
-	//	11: 256
+	//	00: 4096 (every 1024 cycles)
+	//	01: 262144 (every 16 cycles)
+	//	10: 65536 (every 64 cycles)
+	//	11: 16384 (every 256 cycles)
 	unsigned char tac = _IOReg[0x07];
 	unsigned timatab[]= {
-		4096, 262144, 65536, 16384};
+		1024, 16, 64, 256};
 	_clock += cycles;
 	_tac0 += cycles;
-	if (_clock >= 16384)
+	if (_clock >= 256)
 	{
 //		printf("Clock inc\n");
 		_IOReg[0x04] += 1;
-		_clock -= 16384;
+		_clock -= 256;
 	}
 	if (!(tac & (1 << 2)))
 		return ;
