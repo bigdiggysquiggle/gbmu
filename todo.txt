@@ -4,4 +4,10 @@ have save states first export cpu variables, then append with all the ram info f
 
 fix sprite reading/printing. determine where the bug is and fix it
 
-sort out HALT issue
+cpu testrom sections 04 09 11
+
+04 - E
+
+09 - 8 89 8a c 8d 8f 98 99 9a 9b 9c 9d 9f cb08 cb09 cb0a cb0b cb0c cb0d cb0f
+
+11 - 8e 9e cb0e cb86 cb8e cb96 cb9e cba6 cbae cbb6 cbbe cbc6 cbce cbd6 cbde cbe6 cbee cbf6 cbfe

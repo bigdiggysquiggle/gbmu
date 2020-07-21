@@ -65,28 +65,23 @@ unsigned char	cpu::interrupt_check(void)
 	{
 		unsigned short	targets[] = {
 			0x40, 0x48, 0x50, 0x58, 0x60};
-		unsigned char 	intfl = _mmu->accessAt(0xFF0F);
+		unsigned char 	intif = _mmu->accessAt(0xFF0F);
 		int c;
-		for (c = 1; c <= 0x1F && !(c & intfl); c <<= 1)
+		for (c = 1; c <= 0x1F && !(c & intif); c <<= 1)
 			i++;
 		if (c <= 0x1F && c & _mmu->accessAt(0xFFFF))
 		{
-			_mmu->writeTo(0xFF0F, intfl - c);
 //			printf("jump to 0x%02x\n", targets[i]);
 			if (_ime)
 			{
+				_mmu->writeTo(0xFF0F, intif - c);
 				call(targets[i]);
-				if (_halt == true)
-				{
-					_halt = false;
-					return opcode_parse(1);
-				}
 			}
-		}
-		if (_halt == true)
-		{
-			_halt = false;
-			return opcode_parse(0);
+			if (_halt == true)
+			{
+				_halt = false;
+			   return opcode_parse(_ime ? 1 : 0);	
+			}
 		}
 	}
 	return (0);
@@ -169,35 +164,25 @@ void	cpu::ld(union address addr, union address val)
 void	cpu::ldhl(char n)
 {
 	unsigned short dis;
+	unsigned char uns = n;
 	unsigned res;
-	unsigned short ftest = 1 << 11;
+	if (((_registers.sp & 0x0F) + (uns & 0x0F)) & 0xF0)
+		_registers.f |= bitflags::h;
+	else
+		_registers.f &= ~(bitflags::h);
+	if (((_registers.sp & 0xFF) + (uns & 0xFF)) & 0xF00)
+		_registers.f |= bitflags::cy;
+	else
+		_registers.f &= ~(bitflags::cy);
 	if (n < 0)
 	{
 		dis = -n;
 		res = _registers.sp - dis;
-		if (((((_registers.sp & 0x0F00) - (dis & 0x0F00)) >> 8) & 0x10) == 0x10)
-			_registers.f |= bitflags::h;
-		else
-			_registers.f &= ~(bitflags::h);
-		ftest = 1 << 15;
-		if (res & 0xF0000)
-			_registers.f |= bitflags::cy;
-		else
-			_registers.f &= ~(bitflags::cy);
 	}
 	else
 	{
 		dis = n;
 		res = _registers.sp + dis;
-		if (((((_registers.sp & 0x0F00) + (dis & 0x0F00)) >> 8) & 0x10) == 0x10)
-			_registers.f |= bitflags::h;
-		else
-			_registers.f &= ~(bitflags::h);
-		ftest = 1 << 15;
-		if (res & 0xF0000)
-			_registers.f |= bitflags::cy;
-		else
-			_registers.f &= ~(bitflags::cy);
 	}
 	_registers.f &= ~(bitflags::z | bitflags::n);
 	_registers.hl = res;
@@ -222,13 +207,11 @@ void	cpu::pop(unsigned short *regp)
 void	cpu::add(unsigned short *regp)
 {
 	unsigned res = *regp + _registers.hl;
-	unsigned short ftest = 1 << 11;
 	_registers.f &= ~(bitflags::n);
-	if (((((_registers.hl & 0x0F00) + (*regp & 0x0F00)) >> 8) & 0x10) == 0x10)
+	if (((_registers.hl & 0x0FFF) + (*regp & 0x0FFF)) & 0xF000)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
-	ftest = 1 << 15;
 	if (res & 0xF0000)
 		_registers.f |= bitflags::cy;
 	else
@@ -239,35 +222,25 @@ void	cpu::add(unsigned short *regp)
 void	cpu::add(char val)
 {
 	unsigned short dis;
+	unsigned char uns = val;
 	unsigned res;
-	unsigned short ftest = 1 << 11;
+	if (((_registers.sp & 0x0F) + (uns & 0x0F)) & 0xF0)
+		_registers.f |= bitflags::h;
+	else
+		_registers.f &= ~(bitflags::h);
+	if (((_registers.sp & 0xFF) + (uns & 0xFF)) & 0xF00)
+		_registers.f |= bitflags::cy;
+	else
+		_registers.f &= ~(bitflags::cy);
 	if (val < 0)
 	{
 		dis = -val;
 		res = _registers.sp - dis;
-		if (((((_registers.sp & 0x0F00) - (dis & 0x0F00)) >> 8) & 0x10) == 0x10)
-			_registers.f |= bitflags::h;
-		else
-			_registers.f &= ~(bitflags::h);
-		ftest = 1 << 15;
-		if (res & 0xF0000)
-			_registers.f |= bitflags::cy;
-		else
-			_registers.f &= ~(bitflags::cy);
 	}
 	else
 	{
 		dis = val;
 		res = _registers.sp + dis;
-		if (((((_registers.sp & 0x0F00) + (dis & 0x0F00)) >> 8) & 0x10) == 0x10)
-			_registers.f |= bitflags::h;
-		else
-			_registers.f &= ~(bitflags::h);
-		ftest = 1 << 15;
-		if (res & 0xF0000)
-			_registers.f |= bitflags::cy;
-		else
-			_registers.f &= ~(bitflags::cy);
 	}
 	_registers.f &= ~(bitflags::z | bitflags::n);
 	_registers.sp = res;
@@ -275,16 +248,11 @@ void	cpu::add(char val)
 
 void	cpu::add(unsigned char val)
 {
-	unsigned char ftest;
 	unsigned short res = _registers.a + val;
-	ftest = 1 << 3;
-//	if (_registers.a & ftest && val & ftest)
 	if ((((_registers.a & 0x0F) + (val & 0x0F)) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
-	ftest = 1 << 7;
-//	if (_registers.a & ftest && val & ftest)
 	if (res & 0xF00)
 		_registers.f |= bitflags::cy;
 	else
@@ -299,19 +267,13 @@ void	cpu::add(unsigned char val)
 
 void	cpu::adc(unsigned char val)
 {
-	unsigned char ftest;
-
-	ftest = 1 << 3;
 	if (_registers.f & bitflags::cy)
 		_registers.a++;
 	unsigned short res = _registers.a + val;
-//	if (_registers.a & ftest && val & ftest)
 	if ((((_registers.a & 0x0F) + (val & 0x0F)) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
-	ftest = 1 << 7;
-//	if (_registers.a & ftest && val & ftest)
 	if (res & 0xF00)
 		_registers.f |= bitflags::cy;
 	else
@@ -326,17 +288,11 @@ void	cpu::adc(unsigned char val)
 
 void	cpu::sub(unsigned char val)
 {
-	unsigned char ftest;
-
-	ftest = 1 << 3;
 	unsigned short res = _registers.a - val;
-//	if (!(_registers.a & ftest) && val & ftest)
 	if ((((_registers.a & 0x0F) - (val & 0x0F)) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
-	ftest = 1 << 7;
-//	if (!(_registers.a & ftest) && val & ftest)
 	if (res & 0xF00)
 		_registers.f |= bitflags::cy;
 	else
@@ -351,19 +307,13 @@ void	cpu::sub(unsigned char val)
 
 void	cpu::sbc(unsigned char val)
 {
-	unsigned char ftest;
-
-	ftest = 1 << 3;
 	if (_registers.f & bitflags::cy)
 		_registers.a++;
 	unsigned short res = _registers.a - val;
-//	if (!(_registers.a & ftest) && val & ftest)
 	if ((((_registers.a & 0x0F) - (val & 0x0F)) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
-	ftest = 1 << 7;
-//	if (!(_registers.a & ftest) && val & ftest)
 	if (res & 0xF00)
 		_registers.f |= bitflags::cy;
 	else
@@ -409,18 +359,13 @@ void	cpu::_and(unsigned char val)
 
 void	cpu::cp(unsigned char val)
 {
-	unsigned char ftest;
 	unsigned short res;
 
-	ftest = 1 << 3;
-//	if (!(_registers.a & ftest) && val & ftest)
 	if ((((_registers.a & 0x0F) - (val & 0x0F)) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
-	ftest = 1 << 7;
 	res = _registers.a - val;
-//	if (!(_registers.a & ftest) && val & ftest)
 	if (res & 0xF00)
 		_registers.f |= bitflags::cy;
 	else
@@ -439,15 +384,15 @@ void	cpu::inc(unsigned char *reg)
 		val = *reg;
 	else
 		val = _mmu->accessAt(_registers.hl);
+	if ((((val & 0x0F) + 1) & 0x10) == 0x10)
+		_registers.f |= bitflags::h;
+	else
+		_registers.f &= ~(bitflags::h);
 	val++;
 	if (!val)
 		_registers.f |= bitflags::z;
 	else
 		_registers.f &= ~(bitflags::z);
-	if (((val & 0x0F) & 0x10) == 0x10)
-		_registers.f |= bitflags::h;
-	else
-		_registers.f &= ~(bitflags::h);
 	_registers.f &= ~(bitflags::n);
 	if (reg)
 		*reg = val;
@@ -467,15 +412,15 @@ void	cpu::dec(unsigned char *reg)
 		val = *reg;
 	else
 		val = _mmu->accessAt(_registers.hl);
+	if ((((val & 0x0F) - 1) & 0x10) == 0x10)
+		_registers.f |= bitflags::h;
+	else
+		_registers.f &= ~(bitflags::h);
 	val--;
 	if (!val)
 		_registers.f |= bitflags::z;
 	else
 		_registers.f &= ~(bitflags::z);
-	if (((val & 0x0F) & 0x10) == 0x10)
-		_registers.f |= bitflags::h;
-	else
-		_registers.f &= ~(bitflags::h);
 	_registers.f |= bitflags::n;
 	if (reg)
 		*reg = val;
@@ -546,7 +491,7 @@ void	cpu::scf(void)
 	_registers.f &= ~(bitflags::n | bitflags::h);
 }
 
-void	cpu::halt(void)//check if halt resumes execution regargless or waits for an interrupt flag
+void	cpu::halt(void)//halt waits for an IF & IE != 0
 {
 	_halt = true;
 }
@@ -1419,10 +1364,10 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 	_mmu->setINTS();
 	cyc = interrupt_check();
 	if (_halt == true)
-		return 0;
+		return 1;
 	unsigned char opcode = _mmu->accessAt(_registers.pc);
 //	if (debug == true)
-	printf("\t\tcurrent pc: 0x%04x\n", _registers.pc);
+//	printf("\t\tcurrent pc: 0x%04x\n", _registers.pc);
 	unsigned char ftab[4];
 	_registers.pc += haltcheck;
 	ftab[0] = _registers.f & bitflags::z ? 0 : 1;
@@ -1449,13 +1394,13 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 		&_registers.hl,
 		&_registers.af};
 //	if (debug == true)
-		printf("\tnz %d z %d nc %d c %d\n\n", ftab[0], ftab[1], ftab[2], ftab[3]);
+//		printf("\tnz %d z %d nc %d c %d\n\n", ftab[0], ftab[1], ftab[2], ftab[3]);
 	if (opcode == 0xCB)
 	{
 		opcode = _mmu->accessAt(_registers.pc++);
 		cyc += _cbtab[opcode];
 //		if (debug == true)
-			debug_print(opcode, 1, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
+//			debug_print(opcode, 1, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
 		switch(X(opcode))
 		{
 			case 0:
@@ -1478,7 +1423,7 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 	}
 	cyc += cycletab[opcode];
 //	if (debug == true)
-		debug_print(opcode, 0, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
+//		debug_print(opcode, 0, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
 	if (!opcode)
 		return cyc;
    if (opcode < 0x3F && ((opcode & 0x0F) == 0x06 || (opcode & 0x0F) == 0x0E))//LD r, n
