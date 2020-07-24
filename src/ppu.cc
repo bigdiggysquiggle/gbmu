@@ -262,6 +262,8 @@ void	ppu::getTiles9(unsigned short addr, unsigned char x, unsigned char y, unsig
 }
 
 //factor in window drawing
+//do a background draw if background is enabled, then
+//window draw if window is enabled
 //change this to use unsigned ints as the pallet data
 void	ppu::getTiles8(unsigned short addr, unsigned char x, unsigned char y, unsigned char dis)
 {
@@ -287,7 +289,7 @@ void	ppu::getTiles8(unsigned short addr, unsigned char x, unsigned char y, unsig
 		pix += 8;
 	}
 }
-
+/*
 void	ppu::readTiles(unsigned char lcdc)
 {
 	unsigned short mapaddr;
@@ -314,6 +316,43 @@ void	ppu::readTiles(unsigned char lcdc)
 	y += _y;
 	mapaddr += (unsigned short)((y >> 3) * 32);
 	lcdc & (1 << 4) ? getTiles8(mapaddr, x, y, dis) : getTiles9(mapaddr, x, y, dis);
+}*/
+
+void	ppu::readTiles(unsigned char lcdc)
+{
+	unsigned short mapaddr;
+	if (_mmu->vramWrite == true)
+		refreshTiles();
+//	if (lcdc & (1 << 5))
+//		mapaddr = STAT & (1 << 6) ? 0x9C00 : 0x9800;
+//	else
+	mapaddr = (STAT & (1 << 3)) ? 0x9C00 : 0x9800;
+	unsigned char y;
+	unsigned char x;
+	unsigned char dis = 0;
+//	if (lcdc & (1 << 6))
+//	{
+//		y = _wy;
+//		x = _wx;
+//		dis = _wx;
+//	}
+//	else
+//	{
+		y = _sy;
+		x = _sx;
+//	}
+	y += _y;
+	mapaddr += (unsigned short)((y >> 3) * 32);
+	(lcdc & (1 << 4)) ? getTiles8(mapaddr, x, y, dis) : getTiles9(mapaddr, x, y, dis);
+	if (!(lcdc & 1 << 5))
+		return ;
+	mapaddr = (STAT & (1 << 6)) ? 0x9C00 : 0x9800;
+	y = _wy;
+	x = _wx;
+	dis = _wx;
+	y += _y;
+	mapaddr += (unsigned short)((y >> 3) * 32);
+	(lcdc & (1 << 4)) ? getTiles8(mapaddr, x, y, dis) : getTiles9(mapaddr, x, y, dis);
 }
 
 void	ppu::renderLine(unsigned char lcdc)
@@ -329,8 +368,6 @@ void	ppu::renderLine(unsigned char lcdc)
 	if (lcdc & 2 && spritecount)
 		readSprites(lcdc);
 }
-
-// todo, properly implement window drawing logic
 
 // 173.5 + (xscroll % 8)
 //entire frame is 70224 cycles

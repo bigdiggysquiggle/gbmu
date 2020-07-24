@@ -574,7 +574,7 @@ struct	registers {
 void	debug_print(unsigned char op, unsigned char cb, struct registers reg, unsigned char lcdc, unsigned char stat, unsigned char lyc, unsigned char ly, unsigned char IF, unsigned char IE, unsigned char IME)
 {
 	struct s_debugmsg db = cb ? cbtab[op] : msgtab[op];
-	printf("%#hhx %-5s %-7s 0x%04hx\n",op, db.op, db.arg, reg.pc - 1);
+	printf("0x%02hhx %-5s %-7s 0x%04hx\n",op, db.op, db.arg, reg.pc - 1);
 	printf("\tregisters:\n\t");
 	printf("AF 0x%04hx BC 0x%04hx\n",reg.af, reg.bc);
 	printf("\tDE 0x%04hx HL 0x%04hx\n", reg.de, reg.hl);

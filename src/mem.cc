@@ -471,8 +471,7 @@ void	mmu::_IOwrite(unsigned short addr, unsigned char msg)
 
 void	mmu::writeTo(unsigned short addr, unsigned char msg)
 {
-//	if (0x8000 <= addr && addr <= 0x9FFF)
-//		printf("write 0x%02hhx to 0x%04hx\n\n", msg, addr);
+	printf("write 0x%02hhx to 0x%04hx\n\n", msg, addr);
 	if ((_IOReg[0x50] & 1) && (addr <= 0x7FFF || (0xA000 <= addr && addr <= 0xBFFF)))
 		_rom->writeTo(addr, msg);
 	else if (0x8000 <= addr && addr <= 0x9FFF)
@@ -488,7 +487,11 @@ void	mmu::writeTo(unsigned short addr, unsigned char msg)
 	else if (0xC000 <= addr && addr <= 0xCFFF)
 		_wram0[addr - 0xC000] = msg;
 	else if (0xD000 <= addr && addr <= 0xDFFF)
+	{
+//		if (addr == 0xd804)
+//			printf("writing d804 0x%02hhx\n\n", msg);
 		_wram1[_IOReg[0x70] & _cgb_mode][addr - 0xD000] = msg;
+	}
 	else if (0xE000 <= addr && addr <= 0xFDFF)
 		writeTo(addr - 0x2000, msg);
 	else if (0xFE00 <= addr && addr <= 0xFE9F)//check ppu mode

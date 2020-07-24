@@ -4,9 +4,19 @@ have save states first export cpu variables, then append with all the ram info f
 
 fix sprite reading/printing. determine where the bug is and fix it
 
+ppu running slow af
+
 cpu testrom sections 04 09 11
 
 04 - E
+at c5fa where ff80-83 is 13 6f bf 49 HL is dce6 (17 times)
+goes through all 7 following returns, makes it to c2cc
+c19f for some reason I get 01 whereas the emu gets 00
+c1a6 is the jump I need to take
+c171 is the instruction where the bad write happens
+c184 set to ff at 207
+c4bb set to 00 at 207 (2nd time)
+so how am I getting 2 extra writes?
 
 09 - 8 89 8a c 8d 8f 98 99 9a 9b 9c 9d 9f cb08 cb09 cb0a cb0b cb0c cb0d cb0f
 
