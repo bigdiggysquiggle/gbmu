@@ -67,6 +67,7 @@ https://cturt.github.io/cinoop.html
 https://gbdev.io/pandocs/
 https://gbdev.gg8.se/wiki
 https://gb-archive.github.io/salvage/decoding_gbz80_opcodes/Decoding%20Gamboy%20Z80%20Opcodes.html
+https://eldred.fr/gb-asm-tutorial/interrupts.html
 
 Here's a collection of pdfs I used as reference during this
 project:
