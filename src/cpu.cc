@@ -1368,6 +1368,7 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 	unsigned char opcode = _mmu->accessAt(_registers.pc);
 //	if (debug == true)
 	printf("\t\tcurrent pc: 0x%04x\n", _registers.pc);
+//	printf("A:%02hhX F:%C%C%C%C BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x\n", _registers.a, _registers.f & 0x80 ? 'Z' : '-', _registers.f & 0x40 ? 'N' : '-', _registers.f & 0x20 ? 'H' : '-', _registers.f & 0x10 ? 'C' : '-', _registers.bc, _registers.de, _registers.hl, _registers.sp, _registers.pc);
 	unsigned char ftab[4];
 	_registers.pc += haltcheck;
 	ftab[0] = _registers.f & bitflags::z ? 0 : 1;

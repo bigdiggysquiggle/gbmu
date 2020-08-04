@@ -1,6 +1,6 @@
 #ifndef CPU____
 #define CPU____
-#include "mem.hpp"
+#include "mmu.hpp"
 //check endian
 
 union address	{

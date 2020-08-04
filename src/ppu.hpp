@@ -1,6 +1,6 @@
 #ifndef PPU
 #define PPU
-#include "mem.hpp"
+#include "mmu.hpp"
 #include <chrono>
 #include <iostream>
 #include <SDL2/SDL.h>

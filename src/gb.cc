@@ -1,7 +1,7 @@
 #include <unistd.h>
 #include "cpu.hpp"
 #include "cart.hpp"
-#include "mem.hpp"
+#include "mmu.hpp"
 #include "ppu.hpp"
 #include <exception>
 #include <iostream>
