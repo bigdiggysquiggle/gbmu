@@ -14,9 +14,13 @@ goes through all 7 following returns, makes it to c2cc
 c19f for some reason I get 01 whereas the emu gets 00
 c1a6 is the jump I need to take
 c171 is the instruction where the bad write happens
-c184 set to ff at 207
-c4bb set to 00 at 207 (2nd time)
-so how am I getting 2 extra writes?
+c4e6 16 times
+
+lines 2709063 - 13612709 are the lines between the 2nd and 3rd
+write
+after 12th pass
+
+c1a6 should be 0, 0xd804 is written wrong
 
 09 - 8 89 8a c 8d 8f 98 99 9a 9b 9c 9d 9f cb08 cb09 cb0a cb0b cb0c cb0d cb0f
 
