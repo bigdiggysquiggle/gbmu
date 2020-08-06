@@ -46,6 +46,8 @@
 //03h - 32 KBytes (4 banks of 8KBytes each)
 //
 //have mbcs with batteries handle file saving
+//
+//verify if mbc1 carts only ever have ram
 
 
 class cart {

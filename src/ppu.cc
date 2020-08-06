@@ -26,6 +26,7 @@ ppu::ppu(std::shared_ptr<mmu> unit) : _mmu(unit)
 	STAT = _mmu->PaccessAt(0xFF41);
 	_cycles = 70224;
 	_off = 1;
+	_modenxt = 2;
 	unsigned i = 0;
 	while (i < 23040)
 		pixels[i++] = 0xFFFFFF;
@@ -75,9 +76,8 @@ unsigned ctab[] = {
 //side is over the window, use 255 - WX for SCX in this
 //formula
 
-void	ppu::VBlank(unsigned char mode)
+void	ppu::VBlank()
 {
-	_mmu->STATupdate(0x01);
 	_cycles += 456;
 	unsigned char IF = _mmu->accessAt(0xFF0F);
 	_mmu->writeTo(0xFF0F, IF | 0x01);
@@ -383,10 +383,12 @@ int		ppu::frameRender(unsigned char cyc)
 	unsigned char	mode = _mmu->PaccessAt(0xFF41);
 	_cycles = cyc - _cycles;
   	unsigned char y = _mmu->PaccessAt(0xFF44);
-	unsigned char currmode = mode & 0x03;
+//	unsigned char currmode = mode & 0x03;
 	mode &= ~(0x03);
+	mode |= _modenxt;
 	unsigned i = 0;
-	switch(currmode)
+//	switch(currmode)
+	switch(_modenxt)
 	{
 		case 0://move to mode 1/2
 			if (_y < 144)
@@ -394,11 +396,12 @@ int		ppu::frameRender(unsigned char cyc)
 	  		if (y == 144)
 			{
 				_y = 144;
-				VBlank(mode);
+				VBlank();
+				_modenxt = 1;
 				_mmu->writeTo(0xFF44, y);
 				return 1;
 			}
-			mode |= 0x02;
+			_modenxt = 2;
 			_mmu->writeTo(0xFF44, y);
 			readOAM(lcdc);
 			_cycles += 80;
@@ -409,18 +412,18 @@ int		ppu::frameRender(unsigned char cyc)
 				_cycles = cyc - _cycles;
 				_cycles += 456;
 				_y++;
-				mode |= 0x01;
+				_modenxt = 1;
 				_mmu->writeTo(0xFF44, (_y == 154) ? 0 : _y);
 			}
 			else
 			{
-				mode |= 0x02;
+				_modenxt = 2;
 				readOAM(lcdc);
 				_cycles += 80;
 			}
 			break;
 		case 2://move to mode 3
-			mode |= 0x03;
+			_modenxt = 3;
 			if (y != _y || (lcdc & 1 << 5 && !(LCDC & 1 << 5)))
 			{
 				_y = y;
@@ -432,6 +435,7 @@ int		ppu::frameRender(unsigned char cyc)
 		case 3://moving to mode 0
 //			printf("mode 0 hblank\n");
 			_cycles += _hblank; //85 - 208 depending on mode 3 time
+			_modenxt = 0;
 			break;
 //		}
 //		auto stop = std::chrono::high_resolution_clock::now();

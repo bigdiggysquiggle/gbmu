@@ -267,10 +267,9 @@ void	cpu::add(unsigned char val)
 
 void	cpu::adc(unsigned char val)
 {
-	if (_registers.f & bitflags::cy)
-		_registers.a++;
-	unsigned short res = _registers.a + val;
-	if ((((_registers.a & 0x0F) + (val & 0x0F)) & 0x10) == 0x10)
+	unsigned char c = (_registers.f & bitflags::cy) ? 1 : 0;
+	unsigned short res = _registers.a + val + c;
+	if ((((_registers.a & 0x0F) + (val & 0x0F) + c) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
@@ -307,10 +306,9 @@ void	cpu::sub(unsigned char val)
 
 void	cpu::sbc(unsigned char val)
 {
-	if (_registers.f & bitflags::cy)
-		_registers.a++;
-	unsigned short res = _registers.a - val;
-	if ((((_registers.a & 0x0F) - (val & 0x0F)) & 0x10) == 0x10)
+	unsigned char c = (_registers.f & bitflags::cy) ? 1 : 0;
+	unsigned short res = _registers.a - (val + c);
+	if ((((_registers.a & 0x0F) - ((val & 0x0F) + c)) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
 		_registers.f &= ~(bitflags::h);
@@ -587,7 +585,7 @@ void	cpu::rrc(unsigned char *reg)
 {
 	unsigned char val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
-	_registers.f = (val & 0x80) ? (_registers.f | bitflags::cy) : (_registers.f & ~(bitflags::cy));
+	_registers.f = (val & 0x01) ? (_registers.f | bitflags::cy) : (_registers.f & ~(bitflags::cy));
 	val = (val >> 1) | (val << 7);
 	if (!val)
 		_registers.f |= bitflags::z;
@@ -705,7 +703,7 @@ void	cpu::set(unsigned char opcode)
 		0,
 		&_registers.a };
 	unsigned char *reg = _regtab[Z(opcode)];
-	unsigned char val = reg ? *reg : _mmu->accessAt(_registers.f);
+	unsigned char val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	val |= 1 << Y(opcode);
 	if (reg)
 		*reg = val;
@@ -725,7 +723,7 @@ void	cpu::res(unsigned char opcode)
 		0,
 		&_registers.a };
 	unsigned char *reg = _regtab[Z(opcode)];
-	unsigned char val = reg ? *reg : _mmu->accessAt(_registers.f);
+	unsigned char val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	unsigned char bit = 1 << Y(opcode);
 	if (val & bit)
 		val ^= bit;
@@ -1367,7 +1365,7 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 		return 1;
 	unsigned char opcode = _mmu->accessAt(_registers.pc);
 //	if (debug == true)
-	printf("\t\tcurrent pc: 0x%04x\n", _registers.pc);
+//	printf("\t\tcurrent pc: 0x%04x\n", _registers.pc);
 //	printf("A:%02hhX F:%C%C%C%C BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x\n", _registers.a, _registers.f & 0x80 ? 'Z' : '-', _registers.f & 0x40 ? 'N' : '-', _registers.f & 0x20 ? 'H' : '-', _registers.f & 0x10 ? 'C' : '-', _registers.bc, _registers.de, _registers.hl, _registers.sp, _registers.pc);
 	unsigned char ftab[4];
 	_registers.pc += haltcheck;
@@ -1395,13 +1393,13 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 		&_registers.hl,
 		&_registers.af};
 //	if (debug == true)
-		printf("\tnz %d z %d nc %d c %d\n\n", ftab[0], ftab[1], ftab[2], ftab[3]);
+//		printf("\tnz %d z %d nc %d c %d\n\n", ftab[0], ftab[1], ftab[2], ftab[3]);
 	if (opcode == 0xCB)
 	{
 		opcode = _mmu->accessAt(_registers.pc++);
 		cyc += _cbtab[opcode];
 //		if (debug == true)
-			debug_print(opcode, 1, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
+//			debug_print(opcode, 1, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
 		switch(X(opcode))
 		{
 			case 0:
@@ -1424,7 +1422,7 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 	}
 	cyc += cycletab[opcode];
 //	if (debug == true)
-		debug_print(opcode, 0, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
+//		debug_print(opcode, 0, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
 	if (!opcode)
 		return cyc;
    if (opcode < 0x3F && ((opcode & 0x0F) == 0x06 || (opcode & 0x0F) == 0x0E))//LD r, n

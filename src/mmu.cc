@@ -471,18 +471,18 @@ void	mmu::_IOwrite(unsigned short addr, unsigned char msg)
 
 void	mmu::writeTo(unsigned short addr, unsigned char msg)
 {
-	printf("write 0x%02hhx to 0x%04hx\n\n", msg, addr);
+//	printf("write 0x%02hhx to 0x%04hx\n\n", msg, addr);
 	if ((_IOReg[0x50] & 1) && (addr <= 0x7FFF || (0xA000 <= addr && addr <= 0xBFFF)))
 		_rom->writeTo(addr, msg);
 	else if (0x8000 <= addr && addr <= 0x9FFF)
 	{
-		if ((_IOReg[0x41] & 0x03) < 0x03)
-		{
+	//	if ((_IOReg[0x41] & 0x03) < 0x03)
+	//	{
 			_vram[_IOReg[0x4F] & 1][addr - 0x8000] = msg;
 			vramWrite = true;
-		}
-		else
-			printf("Bad vram access\n");
+	//	}
+//		else
+//			printf("Bad vram access\n");
 	}
 	else if (0xC000 <= addr && addr <= 0xCFFF)
 		_wram0[addr - 0xC000] = msg;

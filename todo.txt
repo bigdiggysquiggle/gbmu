@@ -1,27 +1,24 @@
-fix my memory bank controller
+don't forget to restore your mmu to block vram access
+
+ideally find a way to map several arrays into one super array
+--seems entirely possible, tough part is managing IO masks
+---echoed memory can be the same array put in twice
 
 have save states first export cpu variables, then append with all the ram info from the mmu
 
 fix sprite reading/printing. determine where the bug is and fix it
 
-ppu running slow af
+ppu running slow relative to other emulators
 
-cpu testrom sections 04 09 11
+verify whether or not mbc carts always have ram
+--halt_bug.gb
 
-04 - E
-at c5fa where ff80-83 is 13 6f bf 49 HL is dce6 (17 times)
-goes through all 7 following returns, makes it to c2cc
-c19f for some reason I get 01 whereas the emu gets 00
-c1a6 is the jump I need to take
-c171 is the instruction where the bad write happens
-c4e6 16 times
+instr_timing is borked
 
-lines 2709063 - 13612709 are the lines between the 2nd and 3rd
-write
-after 12th pass
+interrupt_time is borked
 
-c1a6 should be 0, 0xd804 is written wrong
+mem_timing is borked
 
-09 - 8 89 8a c 8d 8f 98 99 9a 9b 9c 9d 9f cb08 cb09 cb0a cb0b cb0c cb0d cb0f
+oam_bug isn't preserved
 
-11 - 8e 9e cb0e cb86 cb8e cb96 cb9e cba6 cbae cbb6 cbbe cbc6 cbce cbd6 cbde cbe6 cbee cbf6 cbfe
+implement sound

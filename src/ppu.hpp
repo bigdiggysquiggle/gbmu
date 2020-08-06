@@ -37,6 +37,7 @@ class ppu {
 	private:
 		unsigned char	_hblank;
 		unsigned char	_pause;
+		unsigned		_tot;
 //		unsigned char	_lastpause;
 //		unsigned char	_x;
 		unsigned char	_y;
@@ -51,10 +52,11 @@ class ppu {
 		unsigned char	spritecount;
 		unsigned char	spriteattr[10][4];
 		unsigned char	_count;
+		unsigned char	_modenxt;
 
 		void	vdump(unsigned short);
 
-		void VBlank(unsigned char);
+		void VBlank();
 		void printSprite(unsigned char sprite[16], unsigned char attr[4], unsigned char lcdc);
 		void printSprites16(unsigned char);
 		void printSprites8(unsigned char);

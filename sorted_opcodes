@@ -225,7 +225,7 @@ SBC	A, E	0x9B		4
 SBC	A, H	0x9C		4
 SBC	A, L	0x9D		4
 SBC	A, (HL)	0x9E		8
-SBC	A, n	0x??		?
+SBC	A, n	0xDE		?
 
 AND	r/n
 	AND A with r/n

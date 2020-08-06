@@ -59,10 +59,10 @@ unsigned short	cart::ramSizetab(unsigned char size)
 			return 0x00;
 		case 0x01: //2KB
 			_ramSize = 0x800;
-			return 0x00;
+			return 0x01;
 		case 0x02: //8KB
 			_ramSize = 0x2000;
-			return 0x00;
+			return 0x01;
 		case 0x03: //32KB 4 banks
 			_ramSize = 0x8000;
 			return 0x04;
@@ -157,7 +157,7 @@ unsigned char	cart::readFrom(unsigned short addr)
 
 mbc1::mbc1(unsigned romBanks, unsigned ramBanks, FILE *rom)
 {
-	printf("MBC1\n");
+	printf("MBC1 rom %u ram %u\n", romBanks, ramBanks);
 	_romSpace.resize(romBanks ? romBanks : 2);
 	_ramSpace.resize(ramBanks);
 	for (unsigned i = 0x00; i < romBanks; i++)
@@ -168,6 +168,7 @@ mbc1::mbc1(unsigned romBanks, unsigned ramBanks, FILE *rom)
 
 void			mbc1::writeTo(unsigned short addr, unsigned char val)
 {
+	printf("write 0x%02hhx to 0x%04hx\n\n", val, addr);
 	if (0x0000 <= addr && addr <= 0x1FFF)
 		_ramg = val & 0x0F;
 	else if (0x2000 <= addr && addr <= 0x3FFF)
@@ -176,7 +177,7 @@ void			mbc1::writeTo(unsigned short addr, unsigned char val)
 		_bank2 = ((val >> 5) & 0x03);
 	else if (0x6000 <= addr && addr <= 0x7FFF)
 		_mode = (val & 0x01);
-	else if (0xA000 <= addr && addr <= 0xBFFF)
+	else if (_ramSize && 0xA000 <= addr && addr <= 0xBFFF)
 		_ramWrite(addr - 0xA000, val);
 }
 //if shared pointers work how I hope and I decide to shove
@@ -191,11 +192,13 @@ void			mbc1::writeTo(unsigned short addr, unsigned char val)
 
 void		mbc1::_ramWrite(unsigned short addr, unsigned char val)
 {
+	printf("ffffffffffff\n");
 	if ((_ramg & 0x0F) != 0x0A)
 		return ;
 	unsigned char banknum = 0;
 	if (_ramSize > 0x2000)
 		banknum = _mode ? _bank2 : 0;
+	printf("banknum %u\n", banknum);
 	_ramSpace[banknum][addr] = val;
 	if (_ramSize < 0x2000)
 	{
@@ -221,16 +224,19 @@ unsigned char	mbc1::_rombankRead(unsigned short addr)
 
 unsigned char	mbc1::_rambankRead(unsigned short addr)
 {
+//	printf("we in here?\n");
 	unsigned char banknum = 0;
 	if ((_ramg & 0x0F) != 0x0A)
 		return (0xFF);
 	if (_ramSize > 0x2000)
 		banknum = _mode ? _bank2 : 0;
+//	printf("banknum 0x%02hhx\n", banknum);
 	return (_ramSpace[banknum][addr]);
 }
 
 unsigned char	mbc1::readFrom(unsigned short addr)
 {
+//	printf("we in here 0x%04x\n", addr);
 	if (0x0000 <= addr && addr <= 0x7FFF)
 		return(_rombankRead(addr));
 	else if (0xA000 <= addr && addr <= 0xBFFF)
@@ -261,7 +267,7 @@ void	mbc2::writeTo(unsigned short addr, unsigned char val)
 		else
 			_romg = val ? val & 0x0F: 1;
 	}
-	else if (0xA000 <= addr && addr <= 0xBFFF)
+	else if (_ramSize && 0xA000 <= addr && addr <= 0xBFFF)
 		_ramWrite(addr - 0xA000, val);
 }
 
@@ -323,7 +329,7 @@ void			mbc3::writeTo(unsigned short addr, unsigned char val)
 		_rambank = val;
 	else if (0x6000 <= addr && addr <= 0x7FFF)
 		_latchTime(val);
-	else if (0xA000 <= addr && addr <= 0xBFFF)
+	else if (_ramSize && 0xA000 <= addr && addr <= 0xBFFF)
 		_ramWrite(addr - 0xA000, val);
 }
 
@@ -423,7 +429,7 @@ void			mbc5::writeTo(unsigned short addr, unsigned char val)
 		_bank2 = val & 0x01;
 	else if (0x4000 <= addr && addr <= 0x5FFF)
 		_rambank = val;
-	else if (0xA000 <= addr && addr <= 0xBFFF)
+	else if (_ramSize && 0xA000 <= addr && addr <= 0xBFFF)
 		_ramWrite(addr - 0xA000, val);
 }
 
