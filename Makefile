@@ -25,6 +25,7 @@ $(NAME):
 
 clean:
 	rm -rf $(NAME)
+	rm -rf roms/*.sav
 
 fclean: clean
 	rm -rf $(NAME)

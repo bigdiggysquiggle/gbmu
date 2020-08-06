@@ -8,6 +8,8 @@ have save states first export cpu variables, then append with all the ram info f
 
 fix sprite reading/printing. determine where the bug is and fix it
 
+implement a separate window renderer to solve logic issues
+
 ppu running slow relative to other emulators
 
 verify whether or not mbc carts always have ram

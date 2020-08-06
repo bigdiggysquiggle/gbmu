@@ -442,6 +442,7 @@ int		ppu::frameRender(unsigned char cyc)
 //		auto dur = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
 //		std::cout << "graphics switch: " << dur.count() << std::endl;
 	}
+//	_mmu->writeTo(0xFF41, mode & 0x03);
 	_mmu->STATupdate(mode);
 	LCDC = lcdc;
 	STAT = mode;

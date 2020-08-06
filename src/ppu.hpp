@@ -27,6 +27,7 @@ class ppu {
 					pixels[i] = 0xFFFFFFFF;
 				_cycles = 70224;
 				_mmu->STATupdate(0);
+//				_mmu->writeTo(0xFF41, 0);
 				_mmu->writeTo(0xFF44, 0);
 				return 1;
 			}

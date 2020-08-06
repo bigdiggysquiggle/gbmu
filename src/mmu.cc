@@ -442,9 +442,9 @@ unsigned char	mmu::accessAt(unsigned short addr)
 
 void	mmu::STATupdate(unsigned char mode)
 {
-	unsigned char stat = _IOReg[0x41];
-	stat = (stat & 0xF8) | (mode & 0x03);
-	_IOReg[0x41] = stat;
+	unsigned char _stat = _IOReg[0x41];
+	_stat = (_stat & 0xF8) | (mode & 0x03);
+	_IOReg[0x41] = _stat;
 }
 
 void	mmu::_IOwrite(unsigned short addr, unsigned char msg)
@@ -504,7 +504,10 @@ void	mmu::writeTo(unsigned short addr, unsigned char msg)
 	else if (0xFEA0 <= addr && addr <= 0xFEFF)//unused
 		return ;
 	else if (0xFF00 <= addr && addr <= 0xFF7F)
+	{
+	//	printf("_IOReg at 0x%p\n\n", _IOReg);
 		_IOwrite(addr, msg);
+	}
 	else if (0xFF80 <= addr && addr <= 0xFFFE)
 		_hram[addr - 0xFF80] = msg;
 	else if (addr == 0xFFFF)
