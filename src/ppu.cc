@@ -289,6 +289,57 @@ void	ppu::getTiles8(unsigned short addr, unsigned char x, unsigned char y, unsig
 		pix += 8;
 	}
 }
+
+void	ppu::vdump(unsigned short address)
+{
+	unsigned pix[65025];
+	SDL_Window *win;
+	SDL_Surface *screen;
+	SDL_Texture *frame;
+	SDL_Renderer *renderer;
+	win = SDL_CreateWindow("vram", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 255, 255, SDL_WINDOW_SHOWN);
+	screen = SDL_GetWindowSurface(win);
+	renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
+	frame = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, 255, 255);
+	SDL_Event e;
+	unsigned char bgp = _mmu->PaccessAt(0xFF47);
+	unsigned bgc[] = {
+		ctab[bgp & 3], ctab[(bgp >> 2) & 3],
+		ctab[(bgp >> 4) & 3], ctab[(bgp >> 6)]};
+	unsigned short addr = 0;
+	unsigned short x = 0;
+	unsigned short y = 0;
+	unsigned char tilenum;
+	while (addr < 1024)
+	{
+		while (y < 255)
+		{
+			while (x < 255)
+			{
+				tilenum = _mmu->PaccessAt(address + addr++);
+				for (unsigned char ty = 0; ty < 8; ty++)
+					for (unsigned char tx = 0; tx < 8; tx++)
+					{
+						pix[(x + tx) * (y + ty)] = bgc[tiles[tilenum][ty][tx]];
+					}
+				x += 8;
+			}
+			y += 8;
+		}
+	}
+	SDL_UpdateTexture(frame, NULL, pix, (255 * 4));
+	SDL_RenderCopy(renderer, frame, NULL, NULL);
+	SDL_RenderPresent(renderer);
+	bool viewing = true;
+	while (viewing == true)
+	{
+		SDL_PollEvent(&e);
+		if (e.key.keysym.sym == SDLK_ESCAPE)
+			viewing = false;
+	}
+	SDL_DestroyRenderer(renderer);
+	SDL_DestroyWindow(win);
+}
 /*
 void	ppu::readTiles(unsigned char lcdc)
 {
@@ -347,10 +398,9 @@ void	ppu::readTiles(unsigned char lcdc)
 	if (!(lcdc & 1 << 5))
 		return ;
 	mapaddr = (STAT & (1 << 6)) ? 0x9C00 : 0x9800;
-	y = _wy;
+	y = (_y - _wy);
 	x = _wx;
 	dis = _wx;
-	y += _y;
 	mapaddr += (unsigned short)((y >> 3) * 32);
 	(lcdc & (1 << 4)) ? getTiles8(mapaddr, x, y, dis) : getTiles9(mapaddr, x, y, dis);
 }
