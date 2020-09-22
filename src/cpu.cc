@@ -18,7 +18,7 @@
 
 void	debug_print(unsigned char op, unsigned char cb, struct registers reg, unsigned char lcdc, unsigned char stat, unsigned char ly, unsigned char lyc, unsigned char IF, unsigned char IE, unsigned char IME);
 
-cpu::cpu(std::shared_ptr<mmu> unit) : _mmu(unit)
+cpu::cpu(std::shared_ptr<mmu> unit, std::shared_ptr<ppu> pp) : _mmu(unit), _ppu(pp)
 {
 	//have gb run cart verification before this
 //	_registers.af = 0x01B0; //0x11B0 for cgb and 0xffB0 for pocket
@@ -89,11 +89,10 @@ unsigned char	cpu::interrupt_check(void)
 
 // maybe write wrapper function to access mmu based on mode
 
-void	cpu::reset(char *fname)
+void	cpu::reset()
 {
 	_registers.pc = 0;
 	_mmu->writeTo(0xFF40, 0x00);
-	_mmu->loadCart(fname);
 }
 
 void	cpu::setInterrupt(unsigned char INT)
@@ -114,7 +113,10 @@ void	cpu::ld(unsigned char *reg, unsigned char val)
 	if (reg)
 		*reg = val;
 	else
+	{
+		_ppu->cycle();
 		_mmu->writeTo(_registers.hl, val);
+	}
 }
 
 //below might need to handle (C + 0xFF00) and (n + 0xFF00)
@@ -124,7 +126,10 @@ void	cpu::ld(unsigned char *regd, unsigned short addr)
 	if (regd)
 		*regd = _mmu->accessAt(addr);
 	else
+	{
+		_ppu->cycle();
 		_mmu->writeTo(_registers.hl, _mmu->accessAt(addr));
+	}
 }
 
 void	cpu::ldd(unsigned char a)
@@ -133,6 +138,7 @@ void	cpu::ldd(unsigned char a)
 		_registers.a = _mmu->accessAt(_registers.hl);
 	else
 		_mmu->writeTo(_registers.hl, _registers.a);
+	_ppu->cycle();
 	_registers.hl = _registers.hl - 1;
 }
 
@@ -142,6 +148,7 @@ void	cpu::ldi(unsigned char a)
 		_registers.a = _mmu->accessAt(_registers.hl);
 	else
 		_mmu->writeTo(_registers.hl, _registers.a);
+	_ppu->cycle();
 	_registers.hl++;
 }
 
@@ -152,11 +159,13 @@ void	cpu::ld(unsigned short *regp, unsigned short val)
 
 void	cpu::ld(union address addr, unsigned char val)
 {
+	_ppu->cycle();
 	_mmu->writeTo(addr.addr, val);
 }
 
 void	cpu::ld(union address addr, union address val)
 {
+	_ppu->cycle();
 	_mmu->writeTo(addr.addr, val.n1);
 	_mmu->writeTo(addr.addr + 1, val.n2);
 }
@@ -174,6 +183,7 @@ void	cpu::ldhl(char n)
 		_registers.f |= bitflags::cy;
 	else
 		_registers.f &= ~(bitflags::cy);
+	_ppu->cycle();
 	if (n < 0)
 	{
 		dis = -n;
@@ -185,6 +195,7 @@ void	cpu::ldhl(char n)
 		res = _registers.sp + dis;
 	}
 	_registers.f &= ~(bitflags::z | bitflags::n);
+	_ppu->cycle();
 	_registers.hl = res;
 }
 
@@ -192,20 +203,26 @@ void	cpu::push(unsigned short *regp)
 {
 	union address val;
 	val.addr = *regp;
+	_ppu->cycle();
 	_mmu->writeTo(--_registers.sp, val.n2);
+	_ppu->cycle();
 	_mmu->writeTo(--_registers.sp, val.n1);
+	_ppu->cycle();
 }
 
 void	cpu::pop(unsigned short *regp)
 {
 	union address val;//endian is gonna kill me I swear
+	_ppu->cycle();
 	val.n1 = _mmu->accessAt(_registers.sp++);
+	_ppu->cycle();
 	val.n2 = _mmu->accessAt(_registers.sp++);
 	*regp = val.addr;
 }
 
 void	cpu::add(unsigned short *regp)
 {
+	_ppu->cycle();
 	unsigned res = *regp + _registers.hl;
 	_registers.f &= ~(bitflags::n);
 	if (((_registers.hl & 0x0FFF) + (*regp & 0x0FFF)) & 0xF000)
@@ -244,6 +261,8 @@ void	cpu::add(char val)
 	}
 	_registers.f &= ~(bitflags::z | bitflags::n);
 	_registers.sp = res;
+	_ppu->cycle();
+	_ppu->cycle();
 }
 
 void	cpu::add(unsigned char val)
@@ -381,7 +400,11 @@ void	cpu::inc(unsigned char *reg)
 	if (reg)
 		val = *reg;
 	else
+	{
+		_ppu->cycle();
 		val = _mmu->accessAt(_registers.hl);
+		_ppu->cycle();
+	}
 	if ((((val & 0x0F) + 1) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
@@ -400,6 +423,7 @@ void	cpu::inc(unsigned char *reg)
 
 void	cpu::inc(unsigned short *regp)
 {
+	_ppu->cycle();
 	*regp += 1;
 }
 
@@ -409,7 +433,11 @@ void	cpu::dec(unsigned char *reg)
 	if (reg)
 		val = *reg;
 	else
+	{
+		_ppu->cycle();
 		val = _mmu->accessAt(_registers.hl);
+		_ppu->cycle();
+	}
 	if ((((val & 0x0F) - 1) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
@@ -428,18 +456,24 @@ void	cpu::dec(unsigned char *reg)
 
 void	cpu::dec(unsigned short *regp)
 {
+	_ppu->cycle();
 	*regp = *regp - 1;
 }
 
 void	cpu::swap(unsigned char *reg)
 {
+	_ppu->cycle();
 	unsigned char val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	val = val >> 4 | val << 4;
 	if (reg)
 		*reg = val;
 	else
+	{
+		_ppu->cycle();
 		_mmu->writeTo(_registers.hl, val);
+		_ppu->cycle();
+	}
 	_registers.f &= ~(bitflags::z + bitflags::n + bitflags::h + bitflags::cy);
 	if (!val)
 		_registers.f |= bitflags::z;
@@ -548,6 +582,7 @@ void	cpu::rra(void)
 
 void	cpu::rlc(unsigned char *reg)
 {
+	_ppu->cycle();
 	unsigned char val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	val = (val << 1) | (val >> 7);
@@ -560,11 +595,16 @@ void	cpu::rlc(unsigned char *reg)
 	if (reg)
 		*reg = val;
 	else
+	{
+		_ppu->cycle();
 		_mmu->writeTo(_registers.hl, val);
+		_ppu->cycle();
+	}
 }
 
 void	cpu::rl(unsigned char *reg)
 {
+	_ppu->cycle();
 	unsigned char cb = (_registers.f >> 4) & 0x01;
 	unsigned char val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
@@ -578,11 +618,16 @@ void	cpu::rl(unsigned char *reg)
 	if (reg)
 		*reg = val;
 	else
+	{
+		_ppu->cycle();
 		_mmu->writeTo(_registers.hl, val);
+		_ppu->cycle();
+	}
 }
 
 void	cpu::rrc(unsigned char *reg)
 {
+	_ppu->cycle();
 	unsigned char val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	_registers.f = (val & 0x01) ? (_registers.f | bitflags::cy) : (_registers.f & ~(bitflags::cy));
@@ -595,11 +640,16 @@ void	cpu::rrc(unsigned char *reg)
 	if (reg)
 		*reg = val;
 	else
+	{
+		_ppu->cycle();
 		_mmu->writeTo(_registers.hl, val);
+		_ppu->cycle();
+	}
 }
 
 void	cpu::rr(unsigned char *reg)
 {
+	_ppu->cycle();
 	unsigned char cb = (_registers.f >> 4) & 0x01;
 	unsigned char val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
@@ -613,11 +663,16 @@ void	cpu::rr(unsigned char *reg)
 	if (reg)
 		*reg = val;
 	else
+	{
+		_ppu->cycle();
 		_mmu->writeTo(_registers.hl, val);
+		_ppu->cycle();
+	}
 }
 
 void	cpu::sla(unsigned char *reg)
 {
+	_ppu->cycle();
 	unsigned char val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	_registers.f = (val & 0x80) ? (_registers.f | bitflags::cy) : (_registers.f & ~(bitflags::cy));
@@ -630,11 +685,16 @@ void	cpu::sla(unsigned char *reg)
 	if (reg)
 		*reg = val;
 	else
+	{
+		_ppu->cycle();
 		_mmu->writeTo(_registers.hl, val);
+		_ppu->cycle();
+	}
 }
 
 void	cpu::sra(unsigned char *reg)
 {
+	_ppu->cycle();
 	unsigned char val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	unsigned char bit = (val & 0x80);
@@ -649,11 +709,16 @@ void	cpu::sra(unsigned char *reg)
 	if (reg)
 		*reg = val;
 	else
+	{
+		_ppu->cycle();
 		_mmu->writeTo(_registers.hl, val);
+		_ppu->cycle();
+	}
 }
 
 void	cpu::srl(unsigned char *reg)
 {
+	_ppu->cycle();
 	unsigned char val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	_registers.f = (val & 0x01) ? (_registers.f | bitflags::cy) : (_registers.f & ~(bitflags::cy));
@@ -666,11 +731,16 @@ void	cpu::srl(unsigned char *reg)
 	if (reg)
 		*reg = val;
 	else
+	{
+		_ppu->cycle();
 		_mmu->writeTo(_registers.hl, val);
+		_ppu->cycle();
+	}
 }
 
 void	cpu::bit(unsigned char opcode)
 {
+	_ppu->cycle();
 	unsigned char *_regtab[] = {
 		&_registers.b,
 		&_registers.c,
@@ -689,10 +759,16 @@ void	cpu::bit(unsigned char opcode)
 		_registers.f |= bitflags::z;
 	_registers.f |= bitflags::h;
 	_registers.f &= ~(bitflags::n);
+	if (!reg)
+	{
+		_ppu->cycle();
+		_ppu->cycle();
+	}
 }
 
 void	cpu::set(unsigned char opcode)
 {
+	_ppu->cycle();
 	unsigned char *_regtab[] = {
 		&_registers.b,
 		&_registers.c,
@@ -708,11 +784,16 @@ void	cpu::set(unsigned char opcode)
 	if (reg)
 		*reg = val;
 	else
+	{
+		_ppu->cycle();
 		_mmu->writeTo(_registers.hl, val);
+		_ppu->cycle();
+	}
 }
 
 void	cpu::res(unsigned char opcode)
 {
+	_ppu->cycle();
 	unsigned char *_regtab[] = {
 		&_registers.b,
 		&_registers.c,
@@ -730,7 +811,11 @@ void	cpu::res(unsigned char opcode)
 	if (reg)
 		*reg = val;
 	else
+	{
+		_ppu->cycle();
 		_mmu->writeTo(_registers.hl, val);
+		_ppu->cycle();
+	}
 }
 
 void	cpu::jp(unsigned short addr)
@@ -769,6 +854,7 @@ void	cpu::call(unsigned short addr)
 	_mmu->writeTo(--_registers.sp, val.n2);
 	_mmu->writeTo(--_registers.sp, val.n1);
 	_registers.pc = addr;
+	_ppu->cycle();
 }
 
 void	cpu::call(unsigned short addr, unsigned char ye)
@@ -786,15 +872,23 @@ void	cpu::call(unsigned short addr, unsigned char ye)
 		_mmu->writeTo(--_registers.sp, val.n1);
 		_registers.pc = addr;
 	}
+	_ppu->cycle();
 }
 
 void	cpu::rst(unsigned short addr)
 {
 	union address val;
+	_ppu->cycle();
 	val.addr = _registers.pc;
+	_ppu->cycle();
 	_mmu->writeTo(--_registers.sp, val.n2);
+	_ppu->cycle();
 	_mmu->writeTo(--_registers.sp, val.n1);
+	_ppu->cycle();
 	_registers.pc = addr;
+	_ppu->cycle();
+	_ppu->cycle();
+	_ppu->cycle();
 //	printf("rst to %hx\n", addr);
 //	exit(1);
 }
@@ -805,6 +899,7 @@ void	cpu::ret(void)
 	addr.n1 = _mmu->accessAt(_registers.sp++);
 	addr.n2 = _mmu->accessAt(_registers.sp++);
 	_registers.pc = addr.addr;
+	_ppu->cycle();
 }
 
 void	cpu::ret(unsigned char ye)
@@ -821,6 +916,7 @@ void	cpu::ret(unsigned char ye)
 		addr.n2 = _mmu->accessAt(_registers.sp++);
 		_registers.pc = addr.addr;
 	}
+	_ppu->cycle();
 }
 
 void	cpu::reti(void)
@@ -830,6 +926,7 @@ void	cpu::reti(void)
 	addr.n2 = _mmu->accessAt(_registers.sp++);
 	_registers.pc = addr.addr;
 	this->_ime = 1;
+	_ppu->cycle();
 //	_mmu->writeTo(0xFFFF, 0x1F);
 }
 
@@ -1361,6 +1458,7 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 	unsigned char cyc;
 	_mmu->setINTS();
 	cyc = interrupt_check();
+	_ppu->cycle();
 	if (_halt == true)
 		return 1;
 	unsigned char opcode = _mmu->accessAt(_registers.pc);
@@ -1483,17 +1581,25 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 	}
 	else if (opcode == 0xF8)//LDHL SP, n
 	{
+		_ppu->cycle();
 		char dis = _mmu->accessAt(_registers.pc++);
+		_ppu->cycle();
 		ldhl(dis);
 	}
 	else if (opcode == 0xF9) //LD SP, HL
+	{
+		_ppu->cycle();
 		ld(&_registers.sp, _registers.hl);
+	}
    else if (opcode == 0x08)//LD (nn), SP
    {
 	   union address addr;
 	   union address sp;
+		_ppu->cycle();
 	   addr.n1 = _mmu->accessAt(_registers.pc++);
+		_ppu->cycle();
 	   addr.n2 = _mmu->accessAt(_registers.pc++);
+		_ppu->cycle();
 	   sp.addr = _registers.sp;
 	   ld(addr, sp);
    }

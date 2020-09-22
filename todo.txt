@@ -4,6 +4,14 @@ ideally find a way to map several arrays into one super array
 --seems entirely possible, tough part is managing IO masks
 ---echoed memory can be the same array put in twice
 
+above seems doable by putting everything into a gameboy class
+-still need to work out how to bit mask IO properly
+--make i/oreg a class and define =operator?
+---would need to do for vram too in order to handle modes
+
+-putting everything in gb class also makes properly timing things easier
+ by allowing me to have instructions do their things in 4 cycle increments
+
 have save states first export cpu variables, then append with all the ram info from the mmu
 
 fix sprite reading/printing. determine where the bug is and fix it

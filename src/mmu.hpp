@@ -31,9 +31,12 @@
 // 0xFF80 - 0xFFFE hram
 // - slightly faster than other ram. 
 
+#define DMG 1
+#define GBC 2
+
 class mmu {
 	public:
-		mmu();
+		mmu(unsigned char);
 		void pollInput(void);
 		void loadCart(char *filename);
 		void setINTS(void);
@@ -43,7 +46,12 @@ class mmu {
 		unsigned char	PaccessAt(unsigned short);
 		void			writeTo(unsigned short, unsigned char);
 		void	timerInc(unsigned cycles);
-
+		inline void	dmaTransfer()
+		{
+			unsigned short byte = (_oamtime - 640) / 4;
+			writeTo(0xFE00 + byte, _IOReg[0x46] + byte);
+			_oamtime = _oamtime - 4;
+		}
 		unsigned char	_cgb_mode;
 		bool			vramWrite;
 		unsigned short	_oamtime;

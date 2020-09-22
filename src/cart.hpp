@@ -90,6 +90,14 @@ class cart {
 //	- when 1 0x0000-0x3FFF, 0x4000-0x7FFF, 0xA000-0xBFFF
 
 //implement multicart later
+//
+//Most documentation, including Pan Docs [3], calls value
+//0b0 ROM banking mode, and value 0b1 RAM banking mode. This
+//terminology reflects the common use cases, but "RAM banking"
+//is slightly mis-leading because value 0b1 also affects ROM
+//reads in multicart cartridges and cartridges that have a 8
+//or 16 Mbit ROM chip.
+
 class mbc1 : virtual public cart{
 	//max 2MB ROM and/or 32KB RAM
 	public:

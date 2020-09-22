@@ -249,7 +249,7 @@ struct iomask _IOmasks[] = {
 	{0xFF, 0x00, 0xFF}, //0xFF7F unused
 };
 
-mmu::mmu()
+mmu::mmu(unsigned char type)
 {
 	_cgb_mode = 0;//set to 0x03 for easy bank switch
 	int i = -1;
@@ -263,14 +263,8 @@ mmu::mmu()
 	_IOReg[0x00] |= 0x0F;
 	_clock = 0;
 	_tac0 = 0;
-//	while (init_tab[++i].addr)
-//		writeTo(init_tab[i].addr, init_tab[i].val);
-// TODO: hand code the nintendo logo tiles
-//
-//	unsigned short nlog = 0x8000;
-//	unsigned char byte = 0;
-//	while (nlog < 0x81A0)
-//		writeTo(nlog++, nlogo[byte++]);
+	(void)type;
+// TODO: factory method to generate the different mmus 
 }
 
 		//20 10
@@ -392,8 +386,6 @@ unsigned char	mmu::accessAt(unsigned short addr)
 			val = _rom->readFrom(addr);
 		//val = ((addr < 0x100) && (_IOReg[0x50] == 0x01)) ?_rom->readFrom(addr) : _booter[addr];
 	}
-	else if (0xE000 <= addr && addr <= 0xFDFF)
-		val = 0xFF;
 	else if (0x8000 <= addr && addr <= 0x9FFF)
 	{
 		if ((_IOReg[0x41] & 0x03) < 0x03)
@@ -459,14 +451,7 @@ void	mmu::_IOwrite(unsigned short addr, unsigned char msg)
 	if (!addr)
 		_IOReg[0x00] |= msg;
 	if (addr == 0x46 && (_IOReg[0x41] & 0x03) < 0x02)
-	{
-		unsigned short addr = (unsigned short)msg << 8;
-		unsigned short dst = 0xFE00;
 		_oamtime = 640;
-		while ((addr & 0xFF) < 0x9F)
-			writeTo(dst++, accessAt(addr++));
-			
-	}
 }
 
 void	mmu::writeTo(unsigned short addr, unsigned char msg)
@@ -476,13 +461,13 @@ void	mmu::writeTo(unsigned short addr, unsigned char msg)
 		_rom->writeTo(addr, msg);
 	else if (0x8000 <= addr && addr <= 0x9FFF)
 	{
-	//	if ((_IOReg[0x41] & 0x03) < 0x03)
-	//	{
+		if ((_IOReg[0x41] & 0x03) < 0x03)
+		{
 			_vram[_IOReg[0x4F] & 1][addr - 0x8000] = msg;
 			vramWrite = true;
-	//	}
-//		else
-//			printf("Bad vram access\n");
+		}
+		else
+			printf("Bad vram access\n");
 	}
 	else if (0xC000 <= addr && addr <= 0xCFFF)
 		_wram0[addr - 0xC000] = msg;

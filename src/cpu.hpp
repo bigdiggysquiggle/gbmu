@@ -1,6 +1,7 @@
 #ifndef CPU____
 #define CPU____
 #include "mmu.hpp"
+#include "ppu.hpp"
 //check endian
 
 union address	{
@@ -61,10 +62,11 @@ enum bitflags {
 
 class cpu {
 	public:
-		cpu(std::shared_ptr<mmu>);
-		std::shared_ptr<mmu>	_mmu;//change to shared pointer
+		cpu(std::shared_ptr<mmu>, std::shared_ptr<ppu>);
+		std::shared_ptr<mmu>	_mmu;
+		std::shared_ptr<ppu>	_ppu;
 		unsigned char	interrupt_check(void);
-		void			reset(char *);
+		void			reset();
 		void			setInterrupt(unsigned char);
 		unsigned char	opcode_parse(unsigned char);
 		unsigned char	opcode_parse(void);

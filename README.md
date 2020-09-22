@@ -49,13 +49,19 @@ well. I don't have a strong graphics background but I do have
 a strong math background so I feel like I had a little bit of
 an advantage there. Even so there was a whole lot of trial and
 error involved in making it work. Something I feel like isn't
-explained particularly well is how many cycles each mode
-takes. Mode 3 can take anywhere from 168 to 291 cycles
-depending on how many sprites it finds in OAM that it needs to
-render on the current scanline. This means that mode 0 takes
-208 cycles MINUS how many extra cycles mode 3 took to complete
-in order to properly maintain the cycle count of 456 per
-scanline.
+explained particularly well is how many dots each mode takes.
+Mode 3 can take anywhere from 168 to 291 dots depending on how
+many sprites it finds in OAM that it needs to render on the
+current scanline. This means that mode 0 takes 208 dots MINUS
+how many extra dots mode 3 took to complete in order to
+properly maintain the cycle count of 456 per scanline. These
+456 dots translate to 114 cpu cycles, making a dot equal to
+4 cycles.
+"The Game Boy CPU and PPU run in parallel. The 4.2 MHz master
+clock is also the dot clock. It's divided by 2 to form the
+PPU's 2.1 MHz memory access clock, and divided by 4 to form a
+multi-phase 1.05 MHz clock used by the CPU."
+-- http://forums.nesdev.com/viewtopic.php?f=20&t=17754
 
 If you've stumbled across this repo because you're building
 your own emulator, hopefully some of my notes are of use to

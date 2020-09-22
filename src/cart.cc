@@ -162,7 +162,10 @@ mbc1::mbc1(unsigned romBanks, unsigned ramBanks, FILE *rom)
 	_ramSpace.resize(ramBanks);
 	for (unsigned i = 0x00; i < romBanks; i++)
 		fread(&_romSpace[i][0], 1, 0x4000, rom);
+	_ramg = 0;
 	_bank1 = 1;
+	_bank2 = 0;
+	_mode = 0;
 	fclose(rom);
 }
 
@@ -252,6 +255,7 @@ mbc2::mbc2(unsigned romBanks, unsigned ramBanks, FILE *rom)
 	for (unsigned i = 0x00; i < romBanks; i++)
 		fread(&_romSpace[i][0], 1, 0x4000, rom);
 	fclose(rom);
+	_ramg = 0;
 	_romg = 1;
 //	for (unsigned i = 0x00; i < romBanks; i++)
 //		for (unsigned j = 0x00; j < 0x4000; j++)
@@ -313,7 +317,15 @@ mbc3::mbc3(unsigned romBanks, unsigned ramBanks, FILE *rom)
 	printf("MBC3\n");
 	_romSpace.resize(romBanks ? romBanks : romBanks + 2);
 	_ramSpace.resize(ramBanks);
+	_ramg = 0;
+	_rombank = 1;
+	_rambank = 0;
 	_timeLatch = 0xFF;
+	_rtcS = 0;
+	_rtcM = 0;
+	_rtcH = 0;
+	_rtcDL = 0;
+	_rtcDH = 0;
 	for (unsigned i = 0x00; i < romBanks; i++)
 		fread(&_romSpace[i][0], 1, 0x4000, rom);
 	fclose(rom);
@@ -416,13 +428,19 @@ mbc5::mbc5(unsigned romBanks, unsigned ramBanks, FILE *rom)
 	_ramSpace.resize(ramBanks);
 	for (unsigned i = 0x00; i < romBanks; i++)
 		fread(&_romSpace[i][0], 1, 0x4000, rom);
+	_ramg = 0;
+	_bank1 = 0;
+	_bank2 = 0;
+	_rambank = 0;
 	fclose(rom);
 }
 
+#include <stdlib.h>
 void			mbc5::writeTo(unsigned short addr, unsigned char val)
 {
 	if (0x0000 <= addr && addr <= 0x1FFF)
-		_ramg = val & 0x0F;
+//		_ramg = val & 0x0F;
+		_ramg = val;
 	else if (0x2000 <= addr && addr <= 0x2FFF)
 		_bank1 = val;
 	else if (0x3000 <= addr && addr <= 0x3FFF)
@@ -440,6 +458,7 @@ void		mbc5::_ramWrite(unsigned short addr, unsigned char val)
 	unsigned char banknum = 0;
 	if (_ramSize > 0x2000)
 		banknum = _rambank;
+	printf("ram bank %u\n", _rambank);
 	_ramSpace[banknum][addr] = val;
 	if (_ramSize < 0x2000)
 	{
@@ -466,7 +485,8 @@ unsigned char	mbc5::_rombankRead(unsigned short addr)
 unsigned char	mbc5::_rambankRead(unsigned short addr)
 {
 	unsigned char banknum = 0;
-	if ((_ramg & 0x0F) != 0x0A)
+//	if ((_ramg & 0x0F) != 0x0A)
+	if (_ramg != 0x0A)
 		return (0xFF);
 	if (_ramSize > 0x2000)
 		banknum = _rambank;
