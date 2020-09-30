@@ -48,9 +48,10 @@ class mmu {
 		void	timerInc(unsigned cycles);
 		inline void	dmaTransfer()
 		{
-			unsigned short byte = (_oamtime - 640) / 4;
-			writeTo(0xFE00 + byte, _IOReg[0x46] + byte);
+			unsigned short byte = (640 - _oamtime) / 4;
+			writeTo(0xFE00 + byte, PaccessAt(((unsigned char)_IOReg[0x46] << 8) + byte));
 			_oamtime = _oamtime - 4;
+//			printf("_oamtime %u\n", _oamtime);
 		}
 		unsigned char	_cgb_mode;
 		bool			vramWrite;

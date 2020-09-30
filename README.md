@@ -74,6 +74,17 @@ https://gbdev.io/pandocs/
 https://gbdev.gg8.se/wiki
 https://gb-archive.github.io/salvage/decoding_gbz80_opcodes/Decoding%20Gamboy%20Z80%20Opcodes.html
 https://eldred.fr/gb-asm-tutorial/interrupts.html
+http://www.codeslinger.co.uk/pages/projects/gameboy/dma.html
+http://forums.nesdev.com/viewtopic.php?f=23&t=16612
+http://forums.nesdev.com/viewtopic.php?f=20&t=17754&sid=7f6f26d4e925faff24b2528f6e52cc87
+
+A surprisingly difficult piece of information to wrap my head
+around was timing how the ppu reads in data and converts it
+into an image. These two links held the info I needed to 
+properly sort it out:
+
+http://blog.kevtris.org/blogfiles/Nitty%20Gritty%20Gameboy%20VRAM%20Timing.txt
+https://www.reddit.com/r/EmuDev/comments/59pawp/gb_mode3_sprite_timing/
 
 Here's a collection of pdfs I used as reference during this
 project:

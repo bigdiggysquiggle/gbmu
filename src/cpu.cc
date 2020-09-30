@@ -63,18 +63,20 @@ unsigned char	cpu::interrupt_check(void)
 	int i = 0;
 	if (_halt == true || _ime)
 	{
+//		printf("interrupt checking\n");
 		unsigned short	targets[] = {
 			0x40, 0x48, 0x50, 0x58, 0x60};
 		unsigned char 	intif = _mmu->accessAt(0xFF0F);
 		int c;
 		for (c = 1; c <= 0x1F && !(c & intif); c <<= 1)
 			i++;
-		if (c <= 0x1F && c & _mmu->accessAt(0xFFFF))
+		if (c <= 0x1F && (c & _mmu->accessAt(0xFFFF)))
 		{
 //			printf("jump to 0x%02x\n", targets[i]);
 			if (_ime)
 			{
-				_mmu->writeTo(0xFF0F, intif - c);
+				_mmu->writeTo(0xFF0F, intif & ~c);
+				_ime = 0;
 				call(targets[i]);
 			}
 			if (_halt == true)
@@ -114,7 +116,7 @@ void	cpu::ld(unsigned char *reg, unsigned char val)
 		*reg = val;
 	else
 	{
-		_ppu->cycle();
+		cycle();
 		_mmu->writeTo(_registers.hl, val);
 	}
 }
@@ -124,10 +126,14 @@ void	cpu::ld(unsigned char *reg, unsigned char val)
 void	cpu::ld(unsigned char *regd, unsigned short addr)
 {
 	if (regd)
+	{
+		cycle();
 		*regd = _mmu->accessAt(addr);
+	}
 	else
 	{
-		_ppu->cycle();
+		cycle();
+		cyc += 4;
 		_mmu->writeTo(_registers.hl, _mmu->accessAt(addr));
 	}
 }
@@ -138,7 +144,7 @@ void	cpu::ldd(unsigned char a)
 		_registers.a = _mmu->accessAt(_registers.hl);
 	else
 		_mmu->writeTo(_registers.hl, _registers.a);
-	_ppu->cycle();
+	cycle();
 	_registers.hl = _registers.hl - 1;
 }
 
@@ -148,7 +154,7 @@ void	cpu::ldi(unsigned char a)
 		_registers.a = _mmu->accessAt(_registers.hl);
 	else
 		_mmu->writeTo(_registers.hl, _registers.a);
-	_ppu->cycle();
+	cycle();
 	_registers.hl++;
 }
 
@@ -159,13 +165,13 @@ void	cpu::ld(unsigned short *regp, unsigned short val)
 
 void	cpu::ld(union address addr, unsigned char val)
 {
-	_ppu->cycle();
+	cycle();
 	_mmu->writeTo(addr.addr, val);
 }
 
 void	cpu::ld(union address addr, union address val)
 {
-	_ppu->cycle();
+	cycle();
 	_mmu->writeTo(addr.addr, val.n1);
 	_mmu->writeTo(addr.addr + 1, val.n2);
 }
@@ -183,7 +189,7 @@ void	cpu::ldhl(char n)
 		_registers.f |= bitflags::cy;
 	else
 		_registers.f &= ~(bitflags::cy);
-	_ppu->cycle();
+	cycle();
 	if (n < 0)
 	{
 		dis = -n;
@@ -195,7 +201,7 @@ void	cpu::ldhl(char n)
 		res = _registers.sp + dis;
 	}
 	_registers.f &= ~(bitflags::z | bitflags::n);
-	_ppu->cycle();
+	cycle();
 	_registers.hl = res;
 }
 
@@ -203,26 +209,26 @@ void	cpu::push(unsigned short *regp)
 {
 	union address val;
 	val.addr = *regp;
-	_ppu->cycle();
+	cycle();
 	_mmu->writeTo(--_registers.sp, val.n2);
-	_ppu->cycle();
+	cycle();
 	_mmu->writeTo(--_registers.sp, val.n1);
-	_ppu->cycle();
+	cycle();
 }
 
 void	cpu::pop(unsigned short *regp)
 {
 	union address val;//endian is gonna kill me I swear
-	_ppu->cycle();
+	cycle();
 	val.n1 = _mmu->accessAt(_registers.sp++);
-	_ppu->cycle();
+	cycle();
 	val.n2 = _mmu->accessAt(_registers.sp++);
 	*regp = val.addr;
 }
 
 void	cpu::add(unsigned short *regp)
 {
-	_ppu->cycle();
+	cycle();
 	unsigned res = *regp + _registers.hl;
 	_registers.f &= ~(bitflags::n);
 	if (((_registers.hl & 0x0FFF) + (*regp & 0x0FFF)) & 0xF000)
@@ -261,8 +267,8 @@ void	cpu::add(char val)
 	}
 	_registers.f &= ~(bitflags::z | bitflags::n);
 	_registers.sp = res;
-	_ppu->cycle();
-	_ppu->cycle();
+	cycle();
+	cycle();
 }
 
 void	cpu::add(unsigned char val)
@@ -401,9 +407,9 @@ void	cpu::inc(unsigned char *reg)
 		val = *reg;
 	else
 	{
-		_ppu->cycle();
+		cycle();
 		val = _mmu->accessAt(_registers.hl);
-		_ppu->cycle();
+		cycle();
 	}
 	if ((((val & 0x0F) + 1) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
@@ -423,7 +429,7 @@ void	cpu::inc(unsigned char *reg)
 
 void	cpu::inc(unsigned short *regp)
 {
-	_ppu->cycle();
+	cycle();
 	*regp += 1;
 }
 
@@ -434,9 +440,9 @@ void	cpu::dec(unsigned char *reg)
 		val = *reg;
 	else
 	{
-		_ppu->cycle();
+		cycle();
 		val = _mmu->accessAt(_registers.hl);
-		_ppu->cycle();
+		cycle();
 	}
 	if ((((val & 0x0F) - 1) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
@@ -456,13 +462,13 @@ void	cpu::dec(unsigned char *reg)
 
 void	cpu::dec(unsigned short *regp)
 {
-	_ppu->cycle();
+	cycle();
 	*regp = *regp - 1;
 }
 
 void	cpu::swap(unsigned char *reg)
 {
-	_ppu->cycle();
+	cycle();
 	unsigned char val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	val = val >> 4 | val << 4;
@@ -470,9 +476,9 @@ void	cpu::swap(unsigned char *reg)
 		*reg = val;
 	else
 	{
-		_ppu->cycle();
+		cycle();
 		_mmu->writeTo(_registers.hl, val);
-		_ppu->cycle();
+		cycle();
 	}
 	_registers.f &= ~(bitflags::z + bitflags::n + bitflags::h + bitflags::cy);
 	if (!val)
@@ -536,7 +542,6 @@ void	cpu::stop(void)//check p1 bits and p1 line
 
 unsigned char	cpu::di(void)
 {
-	unsigned char cyc = 4;
 	cyc += opcode_parse();
 	this->_ime = 0;
 	return cyc;
@@ -544,7 +549,6 @@ unsigned char	cpu::di(void)
 
 unsigned char	cpu::ei(void)
 {
-	unsigned char cyc = 4;
 	cyc += opcode_parse();
 	this->_ime = 1;
 	return cyc;
@@ -582,7 +586,7 @@ void	cpu::rra(void)
 
 void	cpu::rlc(unsigned char *reg)
 {
-	_ppu->cycle();
+	cycle();
 	unsigned char val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	val = (val << 1) | (val >> 7);
@@ -596,15 +600,15 @@ void	cpu::rlc(unsigned char *reg)
 		*reg = val;
 	else
 	{
-		_ppu->cycle();
+		cycle();
 		_mmu->writeTo(_registers.hl, val);
-		_ppu->cycle();
+		cycle();
 	}
 }
 
 void	cpu::rl(unsigned char *reg)
 {
-	_ppu->cycle();
+	cycle();
 	unsigned char cb = (_registers.f >> 4) & 0x01;
 	unsigned char val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
@@ -619,15 +623,15 @@ void	cpu::rl(unsigned char *reg)
 		*reg = val;
 	else
 	{
-		_ppu->cycle();
+		cycle();
 		_mmu->writeTo(_registers.hl, val);
-		_ppu->cycle();
+		cycle();
 	}
 }
 
 void	cpu::rrc(unsigned char *reg)
 {
-	_ppu->cycle();
+	cycle();
 	unsigned char val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	_registers.f = (val & 0x01) ? (_registers.f | bitflags::cy) : (_registers.f & ~(bitflags::cy));
@@ -641,15 +645,15 @@ void	cpu::rrc(unsigned char *reg)
 		*reg = val;
 	else
 	{
-		_ppu->cycle();
+		cycle();
 		_mmu->writeTo(_registers.hl, val);
-		_ppu->cycle();
+		cycle();
 	}
 }
 
 void	cpu::rr(unsigned char *reg)
 {
-	_ppu->cycle();
+	cycle();
 	unsigned char cb = (_registers.f >> 4) & 0x01;
 	unsigned char val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
@@ -664,15 +668,15 @@ void	cpu::rr(unsigned char *reg)
 		*reg = val;
 	else
 	{
-		_ppu->cycle();
+		cycle();
 		_mmu->writeTo(_registers.hl, val);
-		_ppu->cycle();
+		cycle();
 	}
 }
 
 void	cpu::sla(unsigned char *reg)
 {
-	_ppu->cycle();
+	cycle();
 	unsigned char val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	_registers.f = (val & 0x80) ? (_registers.f | bitflags::cy) : (_registers.f & ~(bitflags::cy));
@@ -686,15 +690,15 @@ void	cpu::sla(unsigned char *reg)
 		*reg = val;
 	else
 	{
-		_ppu->cycle();
+		cycle();
 		_mmu->writeTo(_registers.hl, val);
-		_ppu->cycle();
+		cycle();
 	}
 }
 
 void	cpu::sra(unsigned char *reg)
 {
-	_ppu->cycle();
+	cycle();
 	unsigned char val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	unsigned char bit = (val & 0x80);
@@ -710,15 +714,15 @@ void	cpu::sra(unsigned char *reg)
 		*reg = val;
 	else
 	{
-		_ppu->cycle();
+		cycle();
 		_mmu->writeTo(_registers.hl, val);
-		_ppu->cycle();
+		cycle();
 	}
 }
 
 void	cpu::srl(unsigned char *reg)
 {
-	_ppu->cycle();
+	cycle();
 	unsigned char val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	_registers.f = (val & 0x01) ? (_registers.f | bitflags::cy) : (_registers.f & ~(bitflags::cy));
@@ -732,15 +736,15 @@ void	cpu::srl(unsigned char *reg)
 		*reg = val;
 	else
 	{
-		_ppu->cycle();
+		cycle();
 		_mmu->writeTo(_registers.hl, val);
-		_ppu->cycle();
+		cycle();
 	}
 }
 
 void	cpu::bit(unsigned char opcode)
 {
-	_ppu->cycle();
+	cycle();
 	unsigned char *_regtab[] = {
 		&_registers.b,
 		&_registers.c,
@@ -761,14 +765,14 @@ void	cpu::bit(unsigned char opcode)
 	_registers.f &= ~(bitflags::n);
 	if (!reg)
 	{
-		_ppu->cycle();
-		_ppu->cycle();
+		cycle();
+		cycle();
 	}
 }
 
 void	cpu::set(unsigned char opcode)
 {
-	_ppu->cycle();
+	cycle();
 	unsigned char *_regtab[] = {
 		&_registers.b,
 		&_registers.c,
@@ -785,15 +789,15 @@ void	cpu::set(unsigned char opcode)
 		*reg = val;
 	else
 	{
-		_ppu->cycle();
+		cycle();
 		_mmu->writeTo(_registers.hl, val);
-		_ppu->cycle();
+		cycle();
 	}
 }
 
 void	cpu::res(unsigned char opcode)
 {
-	_ppu->cycle();
+	cycle();
 	unsigned char *_regtab[] = {
 		&_registers.b,
 		&_registers.c,
@@ -812,9 +816,9 @@ void	cpu::res(unsigned char opcode)
 		*reg = val;
 	else
 	{
-		_ppu->cycle();
+		cycle();
 		_mmu->writeTo(_registers.hl, val);
-		_ppu->cycle();
+		cycle();
 	}
 }
 
@@ -826,11 +830,15 @@ void	cpu::jp(unsigned short addr)
 void	cpu::jp(unsigned short addr, unsigned short ye)
 {
 	if (ye)
+	{
+		cycle();
 		_registers.pc = addr;
+	}
 }
 
 void	cpu::jr(char dis)
 {
+	cycle();
 	unsigned short val = dis < 0 ? -dis : dis;
 	_registers.pc = (dis < 0 ? _registers.pc - val : _registers.pc + val);
 }
@@ -844,17 +852,22 @@ void	cpu::jr(char dis, unsigned short ye)
 //		_registers.f & bitflags::cy ? 1 : 0};
 	unsigned short val = dis < 0 ? -dis : dis;
 	if (ye)
+	{
+		cycle();
 		_registers.pc = (dis < 0 ? _registers.pc - val : _registers.pc + val);
+	}
 }
 
 void	cpu::call(unsigned short addr)
 {
 	union address val;
 	val.addr = _registers.pc;
+	cycle();
 	_mmu->writeTo(--_registers.sp, val.n2);
+	cycle();
 	_mmu->writeTo(--_registers.sp, val.n1);
 	_registers.pc = addr;
-	_ppu->cycle();
+	cycle();
 }
 
 void	cpu::call(unsigned short addr, unsigned char ye)
@@ -872,23 +885,23 @@ void	cpu::call(unsigned short addr, unsigned char ye)
 		_mmu->writeTo(--_registers.sp, val.n1);
 		_registers.pc = addr;
 	}
-	_ppu->cycle();
+	cycle();
 }
 
 void	cpu::rst(unsigned short addr)
 {
 	union address val;
-	_ppu->cycle();
+	cycle();
 	val.addr = _registers.pc;
-	_ppu->cycle();
+	cycle();
 	_mmu->writeTo(--_registers.sp, val.n2);
-	_ppu->cycle();
+	cycle();
 	_mmu->writeTo(--_registers.sp, val.n1);
-	_ppu->cycle();
+	cycle();
 	_registers.pc = addr;
-	_ppu->cycle();
-	_ppu->cycle();
-	_ppu->cycle();
+	cycle();
+	cycle();
+	cycle();
 //	printf("rst to %hx\n", addr);
 //	exit(1);
 }
@@ -896,10 +909,12 @@ void	cpu::rst(unsigned short addr)
 void	cpu::ret(void)
 {
 	union address addr;
+	cycle();
 	addr.n1 = _mmu->accessAt(_registers.sp++);
+	cycle();
 	addr.n2 = _mmu->accessAt(_registers.sp++);
 	_registers.pc = addr.addr;
-	_ppu->cycle();
+	cycle();
 }
 
 void	cpu::ret(unsigned char ye)
@@ -912,21 +927,26 @@ void	cpu::ret(unsigned char ye)
 	if (ye)
 	{
 		union address addr;
+		cycle();
 		addr.n1 = _mmu->accessAt(_registers.sp++);
+		cycle();
 		addr.n2 = _mmu->accessAt(_registers.sp++);
+		cycle();
 		_registers.pc = addr.addr;
 	}
-	_ppu->cycle();
+	cycle();
 }
 
 void	cpu::reti(void)
 {
 	union address addr;
+	cycle();
 	addr.n1 = _mmu->accessAt(_registers.sp++);
+	cycle();
 	addr.n2 = _mmu->accessAt(_registers.sp++);
 	_registers.pc = addr.addr;
 	this->_ime = 1;
-	_ppu->cycle();
+	cycle();
 //	_mmu->writeTo(0xFFFF, 0x1F);
 }
 
@@ -934,265 +954,6 @@ unsigned char	cpu::opcode_parse(void)
 {
 	return opcode_parse(1);
 }
-
-unsigned char cycletab[] = {
-	4,			//{"NOP", ""},
-	12,			//{"LD", "BC, nn"},
-	4,			//{"LD", "(BC), A"},
-	8,			//{"INC", "BC"},
-	4,			//{"INC", "B"},
-	4,			//{"DEC", "B"},
-	8,			//{"LD", "B,n"},
-	4,			//{"RLCA", ""},
-	20,			//{"LD", "(nn),SP"},
-	8,			//{"ADD", "HL, BC"},
-	8,			//{"LD", "A, (BC)"},
-	8,			//{"DEC", "BC"},
-	4,			//{"INC", "C"},
-	4,			//{"DEC", "C"},
-	8,			//{"LD", "C,n"},
-	4,			//{"RRCA", ""},
-	4,			//{"STOP", ""},
-	12,			//{"LD", "DE, nn"},
-	4,			//{"LD", "(DE), A"},
-	8,			//{"INC", "DE"},
-	4,			//{"INC", "D"},
-	4,			//{"DEC", "D"},
-	8,			//{"LD", "D,n"},
-	4,			//{"RLA", ""},
-	8,			//{"JR", "n"},
-	8,			//{"ADD","HL, DE"},
-	8,			//{"LD", "A, (DE)"},
-	8,			//{"DEC", "DE"},
-	4,			//{"INC", "E"},
-	4,			//{"DEC", "E"},
-	8,			//{"LD", "E,n"},
-	4,			//{"RRA", ""},
-	8,			//{"JR", "NZ, n"},
-	12,			//{"LD", "HL, nn"},
-	8,			//{"LD", "(HL+),A"},
-	8,			//{"INC", "HL"},
-	4,			//{"INC", "H"},
-	4,			//{"DEC", "H"},
-	8,			//{"LD", "H,n"},
-	4,			//{"DAA", ""},
-	8,			//{"JR", "Z, n"},
-	8,			//{"ADD", "HL, HL"},
-	8,			//{"LD", "A, (HL+)"},
-	8,			//{"DEC", "HL"},
-	4,			//{"INC", "L"},
-	4,			//{"DEC", "L"},
-	8,			//{"LD", "L,n"},
-	4,			//{"CPL", ""},
-	8,			//{"JR", "NC, n"},
-	12,			//{"LD", "SP, nn"},
-	8,			//{"LD", "(HL-), A"},
-	8,			//{"INC", "SP"},
-	12,			//{"INC", "(HL)"},
-	12,			//{"DEC", "(HL)"},
-	12,			//{"LD", "(HL), n"},
-	4,			//{"SCF", ""},
-	8,			//{"JR", "C, n"},
-	8,			//{"ADD", "HL, SP"},
-	8,			//{"LD", "A,(HL-)"},
-	8,			//{"DEC", "SP"},
-	4,			//{"INC", "A"},
-	4,			//{"DEC", "A"},
-	8,			//{"LD", "A, n"},
-	4,			//{"CCF", ""},
-	4,			//{"LD","B, B"},
-	4,			//{"LD","B, C"},
-	4,			//{"LD","B, D"},
-	4,			//{"LD","B, E"},
-	4,			//{"LD","B, H"},
-	4,			//{"LD","B, L"},
-	8,			//{"LD","B, (HL)"},
-	4,			//{"LD","B, A"},
-	4,			//{"LD","C, B"},
-	4,			//{"LD","C, C"},
-	4,			//{"LD","C, D"},
-	4,			//{"LD","C, E"},
-	4,			//{"LD","C, H"},
-	4,			//{"LD","C, L"},
-	8,			//{"LD","C, (HL)"},
-	4,			//{"LD","C, A"},
-	4,			//{"LD","D, B"},
-	4,			//{"LD","D, C"},
-	4,			//{"LD","D, D"},
-	4,			//{"LD","D, E"},
-	4,			//{"LD","D, H"},
-	4,			//{"LD","D, L"},
-	8,			//{"LD","D, (HL)"},
-	4,			//{"LD","D, A"},
-	4,			//{"LD","E, B"},
-	4,			//{"LD","E, C"},
-	4,			//{"LD","E, D"},
-	4,			//{"LD","E, E"},
-	4,			//{"LD","E, H"},
-	4,			//{"LD","E, L"},
-	8,			//{"LD","E, (HL)"},
-	4,			//{"LD","E, A"},
-	4,			//{"LD","H, B"},
-	4,			//{"LD","H, C"},
-	4,			//{"LD","H, D"},
-	4,			//{"LD","H, E"},
-	4,			//{"LD","H, H"},
-	4,			//{"LD","H, L"},
-	8,			//{"LD","H, (HL)"},
-	4,			//{"LD","H, A"},
-	4,			//{"LD","L, B"},
-	4,			//{"LD","L, C"},
-	4,			//{"LD","L, D"},
-	4,			//{"LD","L, E"},
-	4,			//{"LD","L, H"},
-	4,			//{"LD","L, L"},
-	8,			//{"LD","L, (HL)"},
-	4,			//{"LD","L, A"},
-	8,			//{"LD","(HL), B"},
-	8,			//{"LD","(HL), C"},
-	8,			//{"LD","(HL), D"},
-	8,			//{"LD","(HL), E"},
-	8,			//{"LD","(HL), H"},
-	8,			//{"LD","(HL), L"},
-	4,			//{"HALT", ""},
-	4,			//{"LD", "(HL), A"},
-	4,			//{"LD", "A, B"},
-	4,			//{"LD", "A, C"},
-	4,			//{"LD", "A, D"},
-	4,			//{"LD", "A, E"},
-	4,			//{"LD", "A, H"},
-	4,			//{"LD", "A, L"},
-	8,			//{"LD", "A, (HL)"},
-	4,			//{"LD", "A, A"},
-	4,			//{"ADD", "A, B"},
-	4,			//{"ADD", "A, C"},
-	4,			//{"ADD", "A, D"},
-	4,			//{"ADD", "A, E"},
-	4,			//{"ADD", "A, H"},
-	4,			//{"ADD", "A, L"},
-	8,			//{"ADD", "A, (HL)"},
-	4,			//{"ADD", "A, A"},
-	4,			//{"ADC", "A, B"},
-	4,			//{"ADC", "A, C"},
-	4,			//{"ADC", "A, D"},
-	4,			//{"ADC", "A, E"},
-	4,			//{"ADC", "A, H"},
-	4,			//{"ADC", "A, L"},
-	8,			//{"ADC", "A, (HL)"},
-	4,			//{"ADC", "A, A"},
-	4,			//{"SUB", "A, B"},
-	4,			//{"SUB", "A, C"},
-	4,			//{"SUB", "A, D"},
-	4,			//{"SUB", "A, E"},
-	4,			//{"SUB", "A, H"},
-	4,			//{"SUB", "A, L"},
-	8,			//{"SUB", "A, (HL)"},
-	4,			//{"SUB", "A, A"},
-	4,			//{"SBC", "A, B"},
-	4,			//{"SBC", "A, C"},
-	4,			//{"SBC", "A, D"},
-	4,			//{"SBC", "A, E"},
-	4,			//{"SBC", "A, H"},
-	4,			//{"SBC", "A, L"},
-	8,			//{"SBC", "A, (HL)"},
-	4,			//{"SBC", "A, A"},
-	4,			//{"AND", "B"},
-	4,			//{"AND", "C"},
-	4,			//{"AND", "D"},
-	4,			//{"AND", "E"},
-	4,			//{"AND", "H"},
-	4,			//{"AND", "L"},
-	8,			//{"AND", "(HL)"},
-	4,			//{"AND", "A"},
-	4,			//{"XOR", "B"},
-	4,			//{"XOR", "C"},
-	4,			//{"XOR", "D"},
-	4,			//{"XOR", "E"},
-	4,			//{"XOR", "H"},
-	4,			//{"XOR", "L"},
-	8,			//{"XOR", "(HL)"},
-	4,			//{"XOR", "A"},
-	4,			//{"OR", "B"},
-	4,			//{"OR", "C"},
-	4,			//{"OR", "D"},
-	4,			//{"OR", "E"},
-	4,			//{"OR", "H"},
-	4,			//{"OR", "L"},
-	8,			//{"OR", "(HL)"},
-	4,			//{"OR", "A"},
-	4,			//{"CP", "B"},
-	4,			//{"CP", "C"},
-	4,			//{"CP", "D"},
-	4,			//{"CP", "E"},
-	4,			//{"CP", "H"},
-	4,			//{"CP", "L"},
-	8,			//{"CP", "(HL)"},
-	4,			//{"CP", "A"},
-	8,			//{"RET", "NZ"},
-	12,			//{"POP", "BC"},
-	12,			//{"JP", "NZ, nn"},
-	12,			//{"JP", "nn"},
-	12,			//{"CALL", "NZ,nn"},
-	16,			//{"PUSH", "BC"},
-	8,			//{"ADD", "A, n"},
-	32,			//{"RST", "0x00"},
-	8,			//{"RET", "Z"},
-	8,			//{"RET", ""},
-	12,			//{"JP", "Z, nn"},
-	0,			//{0, 0}, //CB prefix reserved
-	12,			//{"CALL", "Z,nn"},
-	12,			//{"CALL", "nn"},
-	8,			//{"ADC", "A, n"},
-	32,			//{"RST", ""},
-	8,			//{"RET", "NC"},
-	12,			//{"POP", "DE"},
-	12,			//{"JP", "NC, nn"},
-	0,			//{0, 0},				//0xD3 no op
-	12,			//{"CALL", "NC,nn"},
-	16,			//{"PUSH", "DE"},
-	8,			//{"SUB", "A, n"},
-	32,			//{"RST", ""},
-	8,			//{"RET", "C"},
-	8,			//{"RETI", ""},
-	12,			//{"JP", "C, nn"},
-	0,			//{0, 0},				//0xDB no op
-	12,			//{"CALL", "C,nn"},
-	0,			//{0, 0},				//0xDD no op
-	0,			//{0, 0},				//0xDE no op
-	32,			//{"RST", ""},
-	12,			//{"LD", "(n+0xFF00), A"},
-	12,			//{"POP", "HL"},
-	8,			//{"LD", "(C+0xFF00), A"},
-	0,			//{0, 0},				//0xE3 no op
-	0,			//{0, 0},				//0xE4 no op
-	16,			//{"PUSH", "HL"},
-	8,			//{"AND", "n"},
-	32,			//{"RST", ""},
-	16,			//{"ADD", "SP, n"},
-	4,			//{"JP", "(HL)"},
-	4,			//{"LD", "(nn), A"},
-	0,			//{0, 0},				//0xEB no op
-	0,			//{0, 0},				//0xEC no op
-	0,			//{0, 0},				//0xED no op
-	8,			//{"XOR", "n"},
-	32,			//{"RST", ""},
-	12,			//{"LD", "A, (n+0xFF00)"},
-	12,			//{"POP", "AF"},
-	8,			//{"LD", "A, (C+0xFF00)"},
-	1,			//{"DI", ""},//setting in di() instead
-	0,			//{0, 0},				//0xF4 no op
-	16,			//{"PUSH", "AF"},
-	8,			//{"OR", "n"},
-	32,			//{"RST", ""},
-	12,			//{"LDHL", "SP, n"},
-	8,			//{"LD", "SP, HL"},
-	16,			//{"LD", "A, (nn)"},
-	1,			//{"EI", ""},//setting in ei() instead
-	0,			//{0, 0},				//0xFC no op
-	0,			//{0, 0},				//0xFD no op
-	8,			//{"CP", "A"},
-	32,			//{"RST", ""}
-};
 
 unsigned char _cbtab[] ={
 	8,			//{"RLC", "B"},
@@ -1455,12 +1216,11 @@ unsigned char _cbtab[] ={
 
 unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 {
-	unsigned char cyc;
 	_mmu->setINTS();
 	cyc = interrupt_check();
-	_ppu->cycle();
+	cycle();
 	if (_halt == true)
-		return 1;
+		return 4;
 	unsigned char opcode = _mmu->accessAt(_registers.pc);
 //	if (debug == true)
 //	printf("\t\tcurrent pc: 0x%04x\n", _registers.pc);
@@ -1495,9 +1255,8 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 	if (opcode == 0xCB)
 	{
 		opcode = _mmu->accessAt(_registers.pc++);
-		cyc += _cbtab[opcode];
 //		if (debug == true)
-//			debug_print(opcode, 1, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
+//			debug_print(opcode, 1, _registers, _mmu->PaccessAt(0xFF40), _mmu->PaccessAt(0xFF41), _mmu->PaccessAt(0xFF45), _mmu->PaccessAt(0xFF44), _mmu->PaccessAt(0xFF0F), _mmu->PaccessAt(0xFFFF), _ime);
 		switch(X(opcode))
 		{
 			case 0:
@@ -1518,17 +1277,28 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 		_registers.f &= 0xF0;
 		return cyc;
 	}
-	cyc += cycletab[opcode];
 //	if (debug == true)
-//		debug_print(opcode, 0, _registers, _mmu->accessAt(0xFF40), _mmu->accessAt(0xFF41), _mmu->accessAt(0xFF45), _mmu->accessAt(0xFF44), _mmu->accessAt(0xFF0F), _mmu->accessAt(0xFFFF), _ime);
+//		debug_print(opcode, 0, _registers, _mmu->PaccessAt(0xFF40), _mmu->PaccessAt(0xFF41), _mmu->PaccessAt(0xFF45), _mmu->PaccessAt(0xFF44), _mmu->PaccessAt(0xFF0F), _mmu->PaccessAt(0xFFFF), _ime);
 	if (!opcode)
 		return cyc;
-   if (opcode < 0x3F && ((opcode & 0x0F) == 0x06 || (opcode & 0x0F) == 0x0E))//LD r, n
-	   ld(_regtab[Y(opcode)], _mmu->accessAt(_registers.pc++));
+	if (opcode < 0x3F && ((opcode & 0x0F) == 0x06 || (opcode & 0x0F) == 0x0E))//LD r, n
+	{
+	    ld(_regtab[Y(opcode)], _mmu->accessAt(_registers.pc++));
+	    cycle();
+	}
 	else if (0x40 <= opcode && opcode <= 0x7F)//LD r, r 0x76 HALT
 	{
 		unsigned char *reg = _regtab[Z(opcode)];
-		opcode == 0x76 ? halt() : ld(_regtab[Y(opcode)], reg ? *reg : _mmu->accessAt(_registers.hl));
+		if (!reg)
+		{
+			cycle();
+		}
+		if (opcode == 0x76)
+			halt();
+		else
+		{
+			ld(_regtab[Y(opcode)], reg ? *reg : _mmu->accessAt(_registers.hl));
+		}
 	}
 	else if (opcode >= 0xE0 && ((opcode & 0x0F) == 0x0A || (opcode & 0x0F) == 0x02 || !(opcode & 0x0F)))//LD ff00 + c/n or nn to/from A
 	{
@@ -1536,11 +1306,27 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 		if ((opcode & 0x0F) == 0x0A)
 		{
 			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
 			addr.n2 = _mmu->accessAt(_registers.pc++);
+			cycle();
 		}
 		else
-			addr.addr = 0xFF00 + ((opcode & 0x0F) ? _registers.c : _mmu->accessAt(_registers.pc++));
-		((opcode & 0xF0) == 0xF0) ? ld(&_registers.a, _mmu->accessAt(addr.addr)) : ld(addr, _registers.a);
+		{
+			if (opcode & 0x0F)
+				addr.addr = 0xFF00 + _registers.c;
+			else
+			{
+				addr.addr = 0xFF00 + _mmu->accessAt(_registers.pc++);
+				cycle();
+			}
+		if ((opcode & 0xF0) == 0xF0)
+		{
+			ld(&_registers.a, _mmu->accessAt(addr.addr));
+			cycle();
+		}
+		else
+			ld(addr, _registers.a);
+		}
 	}
 	else if (X(opcode) == 0 && Z(opcode) == 2)//LD reg pair into/out of a. dec/inc hl if needed
 	{
@@ -1572,7 +1358,9 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 		if (!(Q(opcode)))//LD rr, nn
 		{
 			union address addr;
+			cycle();
 			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
 			addr.n2 = _mmu->accessAt(_registers.pc++);
 			ld(_pairtabddss[P(opcode)], addr.addr);
 		}
@@ -1581,25 +1369,25 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 	}
 	else if (opcode == 0xF8)//LDHL SP, n
 	{
-		_ppu->cycle();
+		cycle();
 		char dis = _mmu->accessAt(_registers.pc++);
-		_ppu->cycle();
+		cycle();
 		ldhl(dis);
 	}
 	else if (opcode == 0xF9) //LD SP, HL
 	{
-		_ppu->cycle();
+		cycle();
 		ld(&_registers.sp, _registers.hl);
 	}
    else if (opcode == 0x08)//LD (nn), SP
    {
 	   union address addr;
 	   union address sp;
-		_ppu->cycle();
+		cycle();
 	   addr.n1 = _mmu->accessAt(_registers.pc++);
-		_ppu->cycle();
+		cycle();
 	   addr.n2 = _mmu->accessAt(_registers.pc++);
-		_ppu->cycle();
+		cycle();
 	   sp.addr = _registers.sp;
 	   ld(addr, sp);
    }
@@ -1611,10 +1399,15 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 	{
 		unsigned char *regp = _regtab[Z(opcode)];
 		unsigned char val = regp ? *regp : _mmu->accessAt(_registers.hl);
+		if (!regp)
+			cycle();
 		alu(Y(opcode), val);
 	}
 	else if (X(opcode) == 3 && Z(opcode) == 6)//ALU n
+	{
 		alu(Y(opcode), _mmu->accessAt(_registers.pc++));
+		cycle();
+	}
 	else if (X(opcode) == 0 && 3 <= Z(opcode) && Z(opcode) <= 5)//INC/DEC rr/r
 		switch(Z(opcode))
 		{
@@ -1630,7 +1423,8 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 		}
 	else if (opcode == 0xE8)//ADD SP
 	{
-		char val = _mmu->accessAt(_registers.pc++);
+		char val = _mmu->accessAt(_registers.pc++);	
+		cycle();
 		add(val);
 	}
 	else if (X(opcode) == 0 && Z(opcode) == 7)//RLCA RRCA RLA RRA DAA CPL SCF CCF on A
@@ -1646,6 +1440,7 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 	else if (X(opcode) == 0	&& Z(opcode) == 0 && Y(opcode) >=3)//JR d/JR cc, d
 	{
 		char val = _mmu->accessAt(_registers.pc++);
+		cycle();
 //		printf("jr: y %d ftab %hhd\n", Y(opcode), ftab[Y(opcode) - 4]);
 	//	sleep(1);
 		(Y(opcode) == 3) ? jr(val) : jr(val, ftab[Y(opcode) - 4]);
@@ -1655,15 +1450,25 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 	else if (X(opcode) == 3 && (Z(opcode) == 2 || Z(opcode) == 3))//JP nn/JP cc, nn 
 	{
 		union address addr;
+		cycle();
 		addr.n1 = _mmu->accessAt(_registers.pc++);
+		cycle();
 		addr.n2 = _mmu->accessAt(_registers.pc++);
-		Z(opcode) == 3 ? jp(addr.addr) : jp(addr.addr, ftab[Y(opcode)]);
+		if (Z(opcode) == 3)
+		{
+			cycle();
+			jp(addr.addr);
+		}
+		else
+			jp(addr.addr, ftab[Y(opcode)]);
 	}
 	else if (X(opcode) == 3 && (Z(opcode) == 4 || Z(opcode) == 5))//CALL nn/CALL cc, nn
 	{
 		union address addr;
 		addr.n1 = _mmu->accessAt(_registers.pc++);
+		cycle();
 		addr.n2 = _mmu->accessAt(_registers.pc++);
+		cycle();
 		Z(opcode) == 5 ? call(addr.addr) : call(addr.addr, ftab[Y(opcode)]);
 	}
 	else if (X(opcode) == 3 && Z(opcode) == 7)//RST
@@ -1679,8 +1484,6 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 		std::cerr << "Unhandled opcode: 0x" << std::hex << +opcode << std::endl;
 		exit(1);
 	}
-	if (_mmu->_oamtime)
-		_mmu->_oamtime = (cyc > _mmu->_oamtime) ? 0 : _mmu->_oamtime - cyc;
 //	unsigned char c;
 //	if (_registers.pc >= 0x36C && _registers.pc <= 0x36F)
 //		debug = true;

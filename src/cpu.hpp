@@ -71,6 +71,7 @@ class cpu {
 		unsigned char	opcode_parse(unsigned char);
 		unsigned char	opcode_parse(void);
 		bool			debug;
+		unsigned		cyc;
 //		void		checkRom(void);
 
 	private:
@@ -231,6 +232,12 @@ class cpu {
 					ccf();
 					break;
 			}
+		}
+		inline void cycle()
+		{
+			cyc += 4;
+			_mmu->timerInc(4);
+			_ppu->cycle();
 		}
 	};
 

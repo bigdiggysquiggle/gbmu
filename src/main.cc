@@ -53,7 +53,8 @@ int main(int ac, char **av)
 	SDL_PumpEvents();
 	while (quit == false)
 	{
-		_gb.frame_advance(frame);
+		_gb.frame_advance();
+		SDL_UpdateTexture(frame, NULL, _gb._ppu->pixels, (160 * 4));
 		SDL_RenderCopy(render, frame, NULL, NULL);
 		SDL_RenderPresent(render);
 		if (SDL_PollEvent(&e) != 0 && (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)))

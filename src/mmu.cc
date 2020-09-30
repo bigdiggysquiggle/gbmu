@@ -358,7 +358,7 @@ unsigned char	mmu::PaccessAt(unsigned short addr)
 	else if (0xD000 <= addr && addr <= 0xDFFF)
 		val = _wram1[_IOReg[0x70] & _cgb_mode][addr - 0xD000];
 	else if (0xE000 <= addr && addr <= 0xFDFF)
-		val = accessAt(addr - 0x2000);
+		val = PaccessAt(addr - 0x2000);
 	else if (0xFE00 <= addr && addr <= 0xFE9F)
 		val = _oam[addr - 0xFE00];
 	else if (0xFEA0 <= addr && addr <= 0xFEFF)//unused
@@ -376,6 +376,8 @@ unsigned char	mmu::PaccessAt(unsigned short addr)
 unsigned char	mmu::accessAt(unsigned short addr)
 {
 	unsigned char	val = 0xFF;
+	if (_oamtime && (addr < 0xFF80 || addr == 0xFFFF))
+		return val;
 	if (addr <= 0x7FFF || (0xA000 <= addr && addr <= 0xBFFF))
 	{
 //		printf("Accessing 0x%04x\n", addr);
@@ -441,6 +443,7 @@ void	mmu::STATupdate(unsigned char mode)
 
 void	mmu::_IOwrite(unsigned short addr, unsigned char msg)
 {
+//	printf("IOwrite 0x%04X 0x%02X\n", addr, msg);
 	unsigned char mode;
 	addr -= 0xFF00;
 	if (addr == 0x41)

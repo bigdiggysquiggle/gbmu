@@ -11,13 +11,13 @@ class gb {
 		gb();
 		gb(sys_type);
 		void	load_cart(char *);
-		void	frame_advance(SDL_Texture *);
+		void	frame_advance();
 
-	protected:
 		std::unique_ptr<cpu> _cpu;
 		std::shared_ptr<mmu> _mmu;
 		std::shared_ptr<ppu> _ppu;
 
+	protected:
 		unsigned	_cycles;
 };
 

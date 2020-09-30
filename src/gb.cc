@@ -10,7 +10,9 @@
 gb::gb()
 {
 	_cycles = 0;
-	gb(dmg);
+	_mmu = std::make_shared<mmu>(dmg);
+	_ppu = std::make_shared<ppu>(_mmu, dmg);
+	_cpu = std::make_unique<cpu>(_mmu, _ppu);
 }
 
 gb::gb(sys_type type)
@@ -27,7 +29,7 @@ void	gb::load_cart(char *name)
 	_cpu->reset();
 }
 
-void	gb::frame_advance(SDL_Texture *frame)
+void	gb::frame_advance()
 {
 	unsigned framecount = 0;
 	unsigned cyc;
@@ -35,10 +37,13 @@ void	gb::frame_advance(SDL_Texture *frame)
 	{
 		_mmu->pollInput();
 		cyc = _cpu->opcode_parse();
-		_mmu->timerInc(cyc);
+//		printf("cyc = %u\n\n", cyc);
+//		_mmu->timerInc(cyc);
 		_cycles += cyc;
+		framecount += cyc;
 		if (_cycles >= CPU_FREQ)
 			_cycles -= CPU_FREQ;
 	}
-	SDL_UpdateTexture(frame, NULL, _ppu->pixels, (160 * 4));
+//	for (unsigned i = 0; i < 23040; i++)
+//		printf("0x%08X\n", _ppu->pixels[23040]);
 }
