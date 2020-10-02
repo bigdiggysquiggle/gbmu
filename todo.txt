@@ -11,10 +11,6 @@ have save states first export cpu variables, then append with all the ram info f
 
 fix sprite reading/printing. determine where the bug is and fix it
 
-implement a separate window renderer to solve logic issues
-
-ppu running slow relative to other emulators
-
 verify whether or not mbc carts always have ram
 --halt_bug.gb
 
@@ -28,8 +24,5 @@ oam_bug isn't preserved
 
 implement sound
 
-implement ppu as an incrementing state machine, using status
-of informational variables as the means of tracking what it
-needs to do on each call to it. split each portion of the
-read and draw process into separate functions to simplify
-the implementation
+background implementation needs to be ironed out, then figure
+out proper implementation of window rendering

@@ -136,10 +136,10 @@ void	ppu::drawpix()
 			break;
 		case 2:
 			getbyte();
+			genBuf(bwtile[ctile++]);
 			cstate = (_dclk && !iswin) ? 0 : cstate + 1;
 			break;
 		case 3:
-			genBuf(bwtile[ctile++]);
 			spritecheck();
 			break;
 		case 4:
@@ -186,7 +186,7 @@ void	ppu::_drawpix(bool repeat)
 	else
 		pixels[(_y * 160) + _x] = 0x00FFFFFF;
 	_x++;
-	if (i >= 7)
+	if (i >= 7 || _x == 160)
 		sprite = false;
 	if (repeat == true)
 		_drawpix(false);
@@ -195,19 +195,19 @@ void	ppu::_drawpix(bool repeat)
 void	ppu::gettnum()
 {
 	unsigned short map;
-//	unsigned char ex = _dclk ? _x : _x + 8;
-	if ((lcdc & (1 << 5)) && _y >= wy && _x >= (wx - 7))
+	unsigned char ex = _dclk ? _x : _x + 8;
+	if ((lcdc & (1 << 5)) && _y >= wy && ex >= (wx - 7))
 	{
 		map = (lcdc & (1 << 6)) ? 0x9C00 : 0x9800;
-		tilenum = _mmu->PaccessAt(map + ((((_y - wy) / 8) * 32) + (((_x - wx - 7) / 8))));
+		tilenum = _mmu->PaccessAt(map + ((((_y - wy) / 8) * 32) + (((ex - wx - 7) / 8))));
 		iswin = true;
-		if (wx == _x && !_dclk)
+		if (wx == ex && !_dclk)
 			_dclk = 6 + (wx % 8);
 	}
 	else
 	{
 		map = (lcdc & (1 << 3)) ? 0x9C00 : 0x9800;
-		tilenum = _mmu->PaccessAt(map + ((((_y + sy) / 8) * 32) + (((_x + sx) / 8))));
+		tilenum = _mmu->PaccessAt(map + ((((_y + sy) / 8) * 32) + (((ex + sx) / 8))));
 		iswin = false;
 	}
 }
@@ -232,13 +232,13 @@ void	ppu::spritecheck()
 		for (unsigned char i = 0; i < spritecount; i++)
 			if (!sprite && spriteattr[i][SPRITE_X] <= ex && ex < (spriteattr[i][SPRITE_X] + 8))
 			{
-//					printf("new sprite %u x %u\n", i, spriteattr[i][SPRITE_X]);
-					cstate = 4;
-					spriteindex = i;
-					unsigned char sub = iswin ? (255 - wx) % 8 : sx % 8;
-					_dclk = 11 - (sub > 5) ? 5 : sub;
-					sprite = true;
-					return ;
+//				printf("new sprite %u x %u\n", i, spriteattr[i][SPRITE_X]);
+				cstate = 4;
+				spriteindex = i;
+				unsigned char sub = iswin ? (255 - wx) % 8 : sx % 8;
+				_dclk = 11 - (sub > 5) ? 5 : sub;
+				sprite = true;
+				return ;
 			}
 	}
 	cstate = 0;
