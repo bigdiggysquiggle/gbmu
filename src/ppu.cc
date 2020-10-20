@@ -9,11 +9,33 @@
 #define OBP1 0xFF49
 #define WY 0xFF4A
 #define WX 0xFF4B
+
 #define SPRITE_Y 0
 #define SPRITE_X 1
 #define SPRITE_T 2
 #define SPRITE_A 3
 
+#define SP_PAL (spriteattr[spriteindex][SPRITE_A] & 16)
+#define SP_XFLIP (spriteattr[spriteindex][SPRITE_A] & 32)
+#define SP_YFLIP (spriteattr[spriteindex][SPRITE_A] & 64)
+#define SP_PRIO	(spriteattr[spriteindex][SPRITE_A] & 128)
+
+#define BGW_ON (lcdc & 1)
+#define SPRITE_ON (lcdc & 2)
+#define SPRITE_S (lcdc & 4)
+#define BG_MAP (lcdc & 8)
+#define TDAT (lcdc & 16)
+#define WIN_ON (lcdc & 32)
+#define WIN_MAP (lcdc & 64)
+#define LCD_ON (lcdc & 128)
+
+//_oncyc is used as a delay because any time the LCD gets enabled
+//it takes a whole frame before it starts drawing pixels.
+//ctab is the colourtab used to generate the pallets.
+//_dclk delays the LCD clock by however many cycles.
+//_sclk is a separate delay used by the sprite handling logic
+//to delay the LCD clock. I'd like to combine them again but I need
+//to nail down the logic perfectly first.
 ppu::ppu(std::shared_ptr<mmu> mem, unsigned char type) : _mmu(mem)
 {
 	for (unsigned i; i < 23040; i++)
@@ -24,6 +46,7 @@ ppu::ppu(std::shared_ptr<mmu> mem, unsigned char type) : _mmu(mem)
 	_cycles = 0;
 	_oncyc = 70224;
 	_dclk = 0;
+	_sclk = 0;
 	ctab[0] = 0x00FFFFFF;
 	ctab[1] = 0x00AAAAAA;
 	ctab[2] = 0x00555555;
@@ -32,12 +55,18 @@ ppu::ppu(std::shared_ptr<mmu> mem, unsigned char type) : _mmu(mem)
 	//TODO: factory method to generate different ppus
 }
 
+//for each 4 cycles of the CPU, the PPU does 2 things. Hence
+//_cycle accepting a boolean argument. It makes it easier that way
+
 void	ppu::cycle()
 {
 	if (_mmu->_oamtime)
 		_mmu->dmaTransfer();
 	_cycle(true);
 }
+
+//offcheck is define in the header file. It makes sure the LCD is enabled
+//and handles the 1 frame delay before drawing happens.
 
 void	ppu::_cycle(bool repeat)
 {
@@ -48,6 +77,15 @@ void	ppu::_cycle(bool repeat)
 		return;
 	}
 //	printf("ppu %u cycles: %u\n", _mmu->PaccessAt(STAT) & 3, _cycles);
+
+//	In mode 2 the PPU scans OAM to find sprites that appear on the current
+//	scanline. It can only display up to 10 sprites on any given line so checks
+//	are in place. Sprites can be 8x8 or 8x16 pixels as determined by a bit
+//	in the LCDC register. cstate is used here to keep track of where we are in OAM memory.
+//	It gets multiplied by 4 cuz each sprite has 4 bytes associated with it.
+//	SPRITE_Y is the scanline its first line appears on + 16. SPRITE_X is the place in
+//	the current scanline it starts being drawn + 8. SPRITE_T is the tile number that the
+//	sprite uses. SPRITE_A is a set of flags that determine the attributes of the sprite.
 	if ((_mmu->PaccessAt(STAT) & 0x03) == 0x02)
 	{
 		if (spritecount < 10)
@@ -72,22 +110,25 @@ void	ppu::_cycle(bool repeat)
 //			if (spritecount)
 //				printf("line %u sprites %u\n", _y, spritecount);
 			_mmu->STATupdate(0x03);
-			printf("Mode 3\n");
+//			printf("Mode 3\n");
 			cstate = 7;
 			ctile = 0;
 		}
 	}
+	//each scanline is 160 pixels long. If I'm at 160 I know I need to HBLANK
 	else if ((_mmu->PaccessAt(STAT) & 0x03) == 0x03)
 	{
 		if (_x == 160)
 		{
 			spritecount = 0;
 			_mmu->STATupdate(0x00);
-			printf("HBlank\n");
+//			printf("HBlank\n");
 		}
 		else
 			drawpix();
 	}
+	//allows for the scanline number to increment during VBLANK. Even though the resolution is
+	//160x144, the processor still tracks another 10 extra blank lines as VBLANK occurs.
 	else if (_cycles >= 456)
 	{
 		_cycles -= 456;
@@ -97,17 +138,9 @@ void	ppu::_cycle(bool repeat)
 		{
 			if (_y == 154)
 				_y = 0;
-			printf("Mode 2\n");
+//			printf("Mode 2\n");
 			cstate = 0;
 			_mmu->STATupdate(0x02);
-		}
-		else if (_y == 144)
-		{
-			unsigned char IF = _mmu->PaccessAt(0xFF0F);
-			IF |= 1;
-			_mmu->writeTo(0xFF0F, IF);
-			_mmu->STATupdate(0x01);
-			printf("VBlank\n");
 		}
 		_x = 0;
 		_mmu->writeTo(LY, _y);
@@ -117,6 +150,20 @@ void	ppu::_cycle(bool repeat)
 		_cycle(false);
 }
 
+// Uses cstate to keep track of which type of memory access
+// is occurring. The first time through its access cycle on
+// any given scanline it reads the number of the current
+// tile, then it gets the first byte that generates pixels
+// for the current line, then the second byte. It then
+// completely disregards this and, starting from the first
+// tile, goes through the cycle described above, then has
+// a 2 cycle window where sprite information can be accessed
+// (which has its own associated delays which would get
+// inserted at this point in the cycle).
+// For more detailed info, consult the article I have linked
+// in the README about the nitty gritty details as well as
+// the reddit post linked in the README that details how
+// sprite timing works.
 void	ppu::drawpix()
 {
 	sx = _mmu->PaccessAt(SCX);
@@ -136,6 +183,7 @@ void	ppu::drawpix()
 			break;
 		case 2:
 			getbyte();
+			printf("ctile %u\n", ctile);
 			genBuf(bwtile[ctile++]);
 			cstate = (_dclk && !iswin) ? 0 : cstate + 1;
 			break;
@@ -152,6 +200,8 @@ void	ppu::drawpix()
 			break;
 		case 6:
 			getsprite();
+			if (_sclk > 1)
+				return ;
 			cstate = 0;
 			break;
 		case 7:
@@ -178,10 +228,17 @@ void	ppu::_drawpix(bool repeat)
 	if ((_y * 160) + _x > 23040)
 		printf("bad pix at %u %u\n", _x, _y);
 	unsigned char i = sprite ? _x - (spriteattr[spriteindex][SPRITE_X] - 8) : 0;
-	printf("_x %u sx %u ex %u i %u\n", _x, sx, ex, i);
-	if (sprite == true && (lcdc & 2) && sptile[i] && (!(spriteattr[spriteindex][SPRITE_A] & (1 << 7)) || !bwtile[_x / 8][ex] || !(lcdc & 1)))
-			pixels[(_y * 160) + _x] = (spriteattr[spriteindex][SPRITE_A] & (1 << 4)) ? obp1[sptile[i]] : obp0[sptile[i]];
-	else if (lcdc & 1)
+	if (sprite == true)
+	{
+		printf("_x %u sx %u ex %u i %u\n", _x, sx, ex, i);
+		printf("lcdc & 2 %u sptile[%u] %u (!spriteattr & 1<<7 %u || !bwtile %u || !lcdc & 1 %u) %u\n", SPRITE_ON, i, sptile[i], SP_PRIO, bwtile[_x / 8][ex], BGW_ON, (!SP_PRIO || !bwtile[_x / 8][ex] || !BGW_ON));
+	}
+	if (sprite == true && SPRITE_ON && sptile[i] && (!SP_PRIO || !bwtile[_x / 8][ex] || !BGW_ON))
+	{
+		printf("_x %u sx %u ex %u i %u\n", _x, sx, ex, i);
+		pixels[(_y * 160) + _x] = SP_PAL ? obp1[sptile[i]] : obp0[sptile[i]];
+	}
+	else if (BGW_ON)
 		pixels[(_y * 160) + _x] = bgp[bwtile[_x / 8][ex]];
 	else
 		pixels[(_y * 160) + _x] = 0x00FFFFFF;
@@ -196,9 +253,9 @@ void	ppu::gettnum()
 {
 	unsigned short map;
 	unsigned char ex = _dclk ? _x : _x + 8;
-	if ((lcdc & (1 << 5)) && _y >= wy && ex >= (wx - 7))
+	if (WIN_ON && _y >= wy && ex >= (wx - 7))
 	{
-		map = (lcdc & (1 << 6)) ? 0x9C00 : 0x9800;
+		map = WIN_MAP ? 0x9C00 : 0x9800;
 		tilenum = _mmu->PaccessAt(map + ((((_y - wy) / 8) * 32) + (((ex - wx - 7) / 8))));
 		iswin = true;
 		if (wx == ex && !_dclk)
@@ -206,7 +263,7 @@ void	ppu::gettnum()
 	}
 	else
 	{
-		map = (lcdc & (1 << 3)) ? 0x9C00 : 0x9800;
+		map = BG_MAP ? 0x9C00 : 0x9800;
 		tilenum = _mmu->PaccessAt(map + ((((_y + sy) / 8) * 32) + (((ex + sx) / 8))));
 		iswin = false;
 	}
@@ -216,28 +273,29 @@ void	ppu::getbyte()
 {
 	if (iswin)
 	{
-		(lcdc & (1 << 4)) ? fetch8((_y - wy) % 8) : fetch9((_y - wy) % 8);
+		TDAT ? fetch8((_y - wy) % 8) : fetch9((_y - wy) % 8);
 	}
 	else
 	{
-		(lcdc & (1 << 4)) ? fetch8((_y + sy) % 8) : fetch9((_y + sy) % 8);
+		TDAT ? fetch8((_y + sy) % 8) : fetch9((_y + sy) % 8);
 	}
 }
 
 void	ppu::spritecheck()
 {
-	if (spritecount && (lcdc & 2))
+	if (spritecount && SPRITE_ON)
 	{
 		unsigned ex = _x + 8;
 		for (unsigned char i = 0; i < spritecount; i++)
 			if (!sprite && spriteattr[i][SPRITE_X] <= ex && ex < (spriteattr[i][SPRITE_X] + 8))
 			{
-//				printf("new sprite %u x %u\n", i, spriteattr[i][SPRITE_X]);
 				cstate = 4;
 				spriteindex = i;
+				_sclk = 9; //the first two cycles are happening here
 				unsigned char sub = iswin ? (255 - wx) % 8 : sx % 8;
-				_dclk = 11 - (sub > 5) ? 5 : sub;
+				_sclk -= (sub > 5) ? 5 : sub;
 				sprite = true;
+				ctile--;
 				return ;
 			}
 	}
@@ -249,33 +307,35 @@ void	ppu::getsprite()
 {
 	printf("sprite\n");
 	unsigned ey = _y - (spriteattr[spriteindex][SPRITE_Y] - 16);
-	if (lcdc & (1 << 2))
+	if (SPRITE_S)
 	{
-		if (spriteattr[spriteindex][SPRITE_A] & (1 << 6))
+		if (SP_YFLIP)
 			ey = 16 - ey;
 		if (ey < 8)
 		{
-			tilenum = (spriteattr[spriteindex][SPRITE_A] & (1 << 6)) ? tilenum | 0x01 : tilenum & 0xFE;
-			printf("ey %u\n", ey);
+			tilenum = SP_YFLIP ? tilenum | 0x01 : tilenum & 0xFE;
+			printf("16ey %u\n", ey);
 			fetch8(ey);
 		}
 		else
 		{
-			tilenum = (spriteattr[spriteindex][SPRITE_A] & (1 << 6)) ? tilenum & 0xFE : tilenum | 0x01;
-			printf("ey %u\n", ey - 8);
+			tilenum = SP_YFLIP ? tilenum & 0xFE : tilenum | 0x01;
+			printf("16ey %u\n", ey - 8);
 			fetch8(ey - 8);
 		}
 	}
 	else
 	{
-		printf("ey %u\n", ey);
+		if (SP_YFLIP)
+			ey = 7 - ey;
+		printf("8ey %u\n", ey);
 		fetch8(ey);
 	}
 	if (!(cstate % 2))
 	{
-//		printf("sprite bufgen\n");
+		printf("sprite bufgen\n");
 		genBuf(sptile);
-		if (spriteattr[spriteindex][SPRITE_Y] & (1 << 5))
+		if (SP_XFLIP)
 			for (unsigned char i = 0; i < 8; i++)
 			{
 				unsigned char t = sptile[i];
@@ -283,11 +343,12 @@ void	ppu::getsprite()
 				sptile[7 - i] = t;
 			}
 	}
+	_sclk -= 2;
 }
 
 void	ppu::fetch8(unsigned char offset)
 {
-	printf("x %u y %u offset %u\n", _x, _y, offset);
+//	printf("x %u y %u offset %u\n", _x, _y, offset);
 	if (cstate % 2)
 		tbyte[0] = _mmu->PaccessAt((0x8000 + (tilenum * 16)) + (2 * offset));
 	else
@@ -305,7 +366,7 @@ void	ppu::fetch9(unsigned char offset)
 
 void	ppu::genBuf(unsigned char *t)
 {
-	printf("bufgen\n");
+//	printf("bufgen\n");
 //	for (unsigned i = 0; i < 8; i++)
 //		printf("%u", (tbyte[0] & (1 << i)) ? 1 : 0);
 //	printf(" ");
@@ -326,6 +387,9 @@ void	ppu::palletcalc()
 	unsigned char _bgp = _mmu->PaccessAt(BGP);
 	unsigned char _obp0 = _mmu->PaccessAt(OBP0);
 	unsigned char _obp1 = _mmu->PaccessAt(OBP1);
+//	printf("ctab:\n");
+//	for (int i = 0; i < 4; i++)
+//		printf("\t0x%08X\n", ctab[i]);
 	bgp[0] = ctab[_bgp & 0x03];
 	bgp[1] = ctab[(_bgp >> 2) & 0x03];
 	bgp[2] = ctab[(_bgp >> 4) & 0x03];
@@ -343,17 +407,17 @@ void	ppu::palletcalc()
 //		printf("%u", (_bgp & (1 << i)) ? 1 : 0);
 //	printf("\n");
 //	for (unsigned char i = 0; i < 4; i++)
-//		printf("bgp 0x%08X\n", bgp[i]);
+//		printf("\t0x%08X\n", bgp[i]);
 //	printf("obp0: ");
 //	for (unsigned char i = 0; i < 8; i++)
 //		printf("%u", (_obp0 & (1 << i)) ? 1 : 0);
 //	printf("\n");
 //	for (unsigned char i = 0; i < 4; i++)
-//		printf("obp0 0x%08X\n", obp0[i]);
+//		printf("\t0x%08X\n", obp0[i]);
 //	printf("obp1: ");
 //	for (unsigned char i = 0; i < 8; i++)
 //		printf("%u", (_obp1 & (1 << i)) ? 1 : 0);
 //	printf("\n");
 //	for (unsigned char i = 0; i < 4; i++)
-//		printf("obp1 0x%08X\n", obp1[i]);
+//		printf("\t0x%08X\n", obp1[i]);
 }

@@ -64,6 +64,7 @@ class ppu {
 		unsigned _cycles;
 		unsigned _oncyc;
 		unsigned _dclk;
+		unsigned _sclk;
 
 		unsigned char _x;
 		unsigned char _y;

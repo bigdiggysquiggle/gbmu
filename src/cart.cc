@@ -5,6 +5,9 @@ cart::cart()
 	return ;
 }
 
+//construct a barebones cart with the absolute minimum
+//required memory space. Fill the first two banks with
+//ROM data
 cart::cart(FILE *rom, unsigned short ram)
 {
 	_romSpace.resize(0x02);
@@ -16,6 +19,9 @@ cart::cart(FILE *rom, unsigned short ram)
 	return;
 }
 
+//uses a byte from the ROM's header to determine the
+//actual size used by the game so _romSpace can be
+//resized if needed
 unsigned short 	cart::romSizetab(unsigned char size)
 {
 	switch(size)
@@ -50,6 +56,9 @@ unsigned short 	cart::romSizetab(unsigned char size)
 	return 0x00;
 }
 
+//uses a byte from the ROM's header to determine the
+//amount of RAM that it needs so _ramSpace can be resized
+//if needed
 unsigned short	cart::ramSizetab(unsigned char size)
 {
 	switch(size)
@@ -75,6 +84,10 @@ unsigned short	cart::ramSizetab(unsigned char size)
 	}
 	return 0x00;
 }
+
+//factory method used to generate the type of cartridge
+//used by the rom. determines ramsize, romsize, and MBC
+//based on bytes located in the ROM header
 std::unique_ptr<cart>	cart::loadCart(char *fname)
 {
 	if (!fname)

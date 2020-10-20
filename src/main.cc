@@ -13,6 +13,12 @@
 #define WIN_WIDTH 160
 #define WIN_HEIGHT 144
 
+//eventually will be used to generate a graphical
+//interface which would then be able to control
+//all aspects of the emulated hardware, including
+//changing hardware as well as viewing and editting
+//memory values
+
 int main(int ac, char **av)
 {
 	if (ac != 2 && ac != 3)

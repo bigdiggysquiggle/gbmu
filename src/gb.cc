@@ -6,6 +6,12 @@
 #define CPU_FREQ 4194304
 #define FRAME_TIME 70224
 
+//Designed to contain the classes that make up the
+//individual pieces of hardware inside of an actual
+//gameboy. Makes it easy to generate different types
+//of emulated hardware as well as reset the emulation
+//and even potentially change the hardware types on
+//the fly.
 
 gb::gb()
 {
@@ -22,6 +28,9 @@ gb::gb(sys_type type)
 	_ppu = std::make_shared<ppu>(_mmu, type);
 	_cpu = std::make_unique<cpu>(_mmu, _ppu);
 }
+
+//passthrough function for the MMU to load and map
+//the ROM and RAM into memory
 
 void	gb::load_cart(char *name)
 {
