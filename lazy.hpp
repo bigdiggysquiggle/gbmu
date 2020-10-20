@@ -3,6 +3,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+//proof of concept for a less stupid container that would be
+//used to load pixels into the main pixel array as they get
+//generated
+
 class laz_e {
 	public:
 		laz_e()
