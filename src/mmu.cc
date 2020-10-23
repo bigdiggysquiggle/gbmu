@@ -1,3 +1,4 @@
+#include "print_debug.hpp"
 #include "mmu.hpp"
 
 //replace this with a 100 byte array that
@@ -327,7 +328,7 @@ void	mmu::setINTS(void)
 //in the PPU source code.
 unsigned char	mmu::PaccessAt(unsigned short addr)
 {
-//	printf("PAccessing 0x%04x\n", addr);
+//	PRINT_DEBUG("PAccessing 0x%04x", addr);
 	unsigned char	val;
 	if (addr <= 0x7FFF || (0xA000 <= addr && addr <= 0xBFFF))
 		val = _rom->readFrom(addr);
@@ -351,7 +352,7 @@ unsigned char	mmu::PaccessAt(unsigned short addr)
 		val = _hram[addr - 0xFF80];
 	else if (addr == 0xFFFF)
 		val = _IE;
-//	printf("Returning: 0x%02x\n\n", val);
+//	PRINT_DEBUG("Returning: 0x%02x", val);
 	return val;
 }
 
@@ -365,8 +366,8 @@ unsigned char	mmu::accessAt(unsigned short addr)
 		return val;
 	if (addr <= 0x7FFF || (0xA000 <= addr && addr <= 0xBFFF))
 	{
-//		printf("Accessing 0x%04x\n", addr);
-//		printf("0x%hx < 0x100 (%u) && 0xFF50 (0x%hhx)", addr, addr < 0x100, _IOReg[0x50]);
+//		PRINT_DEBUG("Accessing 0x%04x", addr);
+//		PRINT_DEBUG("0x%hx < 0x100 (%u) && 0xFF50 (0x%hhx)", addr, addr < 0x100, _IOReg[0x50]);
 		if ((addr < 0x100) && !(_IOReg[0x50] & 0x01))
 			val = _booter[addr];
 		else
@@ -401,7 +402,7 @@ unsigned char	mmu::accessAt(unsigned short addr)
 		val = _hram[addr - 0xFF80];
 	else if (addr == 0xFFFF)
 		val = _IE;
-//	printf("Returning: 0x%02x\n\n", val);
+//	PRINT_DEBUG("Returning: 0x%02x", val);
 	return val;
 }
 
@@ -432,7 +433,7 @@ void	mmu::STATupdate(unsigned char mode)
 
 void	mmu::_IOwrite(unsigned short addr, unsigned char msg)
 {
-//	printf("IOwrite 0x%04X 0x%02X\n", addr, msg);
+//	PRINT_DEBUG("IOwrite 0x%04X 0x%02X", addr, msg);
 	unsigned char mode;
 	addr -= 0xFF00;
 	if (addr == 0x41)
@@ -451,7 +452,7 @@ void	mmu::_IOwrite(unsigned short addr, unsigned char msg)
 
 void	mmu::writeTo(unsigned short addr, unsigned char msg)
 {
-//	printf("write 0x%02hhx to 0x%04hx\n\n", msg, addr);
+//	PRINT_DEBUG("write 0x%02hhx to 0x%04hx", msg, addr);
 	if ((_IOReg[0x50] & 1) && (addr <= 0x7FFF || (0xA000 <= addr && addr <= 0xBFFF)))
 		_rom->writeTo(addr, msg);
 	else if (0x8000 <= addr && addr <= 0x9FFF)
@@ -469,7 +470,7 @@ void	mmu::writeTo(unsigned short addr, unsigned char msg)
 	else if (0xD000 <= addr && addr <= 0xDFFF)
 	{
 //		if (addr == 0xd804)
-//			printf("writing d804 0x%02hhx\n\n", msg);
+//			PRINT_DEBUG("writing d804 0x%02hhx", msg);
 		_wram1[_IOReg[0x70] & _cgb_mode][addr - 0xD000] = msg;
 	}
 	else if (0xE000 <= addr && addr <= 0xFDFF)
@@ -485,7 +486,7 @@ void	mmu::writeTo(unsigned short addr, unsigned char msg)
 		return ;
 	else if (0xFF00 <= addr && addr <= 0xFF7F)
 	{
-	//	printf("_IOReg at 0x%p\n\n", _IOReg);
+//		PRINT_DEBUG("_IOReg at 0x%p", _IOReg);
 		_IOwrite(addr, msg);
 	}
 	else if (0xFF80 <= addr && addr <= 0xFFFE)
@@ -516,7 +517,7 @@ void	mmu::timerInc(unsigned cycles)
 	_tac0 += cycles;
 	if (_clock >= 256)
 	{
-//		printf("Clock inc\n");
+//		PRINT_DEBUG("Clock inc");
 		_IOReg[0x04] += 1;
 		_clock -= 256;
 	}
@@ -529,12 +530,13 @@ void	mmu::timerInc(unsigned cycles)
 		{
 			_IOReg[0x0F] |= (1 << 2);
 			_IOReg[0x05] = _IOReg[0x06];
-//			printf("INT set\n");
+//			PRINT_DEBUG("INT set");
 		}
 		else
-//		{printf("Timer inc\n");
+		{
+//			PRINT_DEBUG("Timer inc");
 			_IOReg[0x05] += 1;
-//		}
+		}
 		while (_tac0 >= timatab[tac])
 			_tac0 -= timatab[tac];
 	}

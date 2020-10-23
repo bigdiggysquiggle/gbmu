@@ -1,3 +1,4 @@
+#include "print_debug.hpp"
 #include "cpu.hpp"
 #include <stdlib.h>
 #include <unistd.h>
@@ -64,7 +65,7 @@ unsigned char	cpu::interrupt_check(void)
 	int i = 0;
 	if (_halt == true || _ime)
 	{
-//		printf("interrupt checking\n");
+//		PRINT_DEBUG("interrupt checking");
 		unsigned short	targets[] = {
 			0x40, 0x48, 0x50, 0x58, 0x60};
 		unsigned char 	intif = _mmu->accessAt(0xFF0F);
@@ -73,7 +74,7 @@ unsigned char	cpu::interrupt_check(void)
 			i++;
 		if (c <= 0x1F && (c & _mmu->accessAt(0xFFFF)))
 		{
-//			printf("jump to 0x%02x\n", targets[i]);
+//			PRINT_DEBUG("jump to 0x%02x", targets[i]);
 			if (_ime)
 			{
 				_mmu->writeTo(0xFF0F, intif & ~c);
@@ -903,7 +904,7 @@ void	cpu::rst(unsigned short addr)
 	cycle();
 	cycle();
 	cycle();
-//	printf("rst to %hx\n", addr);
+//	PRINT_DEBUG("rst to %hx", addr);
 //	exit(1);
 }
 
@@ -965,8 +966,10 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 		return 4;
 	unsigned char opcode = _mmu->accessAt(_registers.pc);
 //	if (debug == true)
-//	printf("\t\tcurrent pc: 0x%04x\n", _registers.pc);
-//	printf("A:%02hhX F:%C%C%C%C BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x\n", _registers.a, _registers.f & 0x80 ? 'Z' : '-', _registers.f & 0x40 ? 'N' : '-', _registers.f & 0x20 ? 'H' : '-', _registers.f & 0x10 ? 'C' : '-', _registers.bc, _registers.de, _registers.hl, _registers.sp, _registers.pc);
+//	{
+//		PRINT_DEBUG("\t\tcurrent pc: 0x%04x", _registers.pc);
+//		PRINT_DEBUG("A:%02hhX F:%C%C%C%C BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x", _registers.a, _registers.f & 0x80 ? 'Z' : '-', _registers.f & 0x40 ? 'N' : '-', _registers.f & 0x20 ? 'H' : '-', _registers.f & 0x10 ? 'C' : '-', _registers.bc, _registers.de, _registers.hl, _registers.sp, _registers.pc);
+//	}
 	unsigned char ftab[4];
 	_registers.pc += haltcheck;
 	ftab[0] = _registers.f & bitflags::z ? 0 : 1;
@@ -993,7 +996,7 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 		&_registers.hl,
 		&_registers.af};
 //	if (debug == true)
-//		printf("\tnz %d z %d nc %d c %d\n\n", ftab[0], ftab[1], ftab[2], ftab[3]);
+//		PRINT_DEBUG("\tnz %d z %d nc %d c %d", ftab[0], ftab[1], ftab[2], ftab[3]);
 	if (opcode == 0xCB)
 	{
 		opcode = _mmu->accessAt(_registers.pc++);
@@ -1183,7 +1186,7 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 	{
 		char val = _mmu->accessAt(_registers.pc++);
 		cycle();
-//		printf("jr: y %d ftab %hhd\n", Y(opcode), ftab[Y(opcode) - 4]);
+//		PRINT_DEBUG("jr: y %d ftab %hhd", Y(opcode), ftab[Y(opcode) - 4]);
 	//	sleep(1);
 		(Y(opcode) == 3) ? jr(val) : jr(val, ftab[Y(opcode) - 4]);
 	}
@@ -1231,7 +1234,7 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 //		debug = true;
 //	if (debug)
 //	{
-//		printf("step\n");
+//		PRINT_DEBUG("step");
 //		read(0, &c, 1);
 //	}
 //	usleep(100000);

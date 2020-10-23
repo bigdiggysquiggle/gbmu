@@ -1,3 +1,4 @@
+#include "print_debug.hpp"
 #include "gb.hpp"
 #include <SDL2/SDL.h>
 
@@ -46,7 +47,7 @@ void	gb::frame_advance()
 	{
 		_mmu->pollInput();
 		cyc = _cpu->opcode_parse();
-//		printf("cyc = %u\n\n", cyc);
+//		PRINT_DEBUG("cyc = %u", cyc);
 //		_mmu->timerInc(cyc);
 		_cycles += cyc;
 		framecount += cyc;
@@ -54,5 +55,5 @@ void	gb::frame_advance()
 			_cycles -= CPU_FREQ;
 	}
 //	for (unsigned i = 0; i < 23040; i++)
-//		printf("0x%08X\n", _ppu->pixels[23040]);
+//		PRINT_DEBUG("0x%08X", _ppu->pixels[23040]);
 }

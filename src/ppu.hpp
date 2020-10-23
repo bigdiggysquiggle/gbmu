@@ -1,5 +1,6 @@
 #ifndef PPU
 #define PPU
+#include "print_debug.hpp"
 #include "mmu.hpp"
 #include "lazy.hpp"
 #include <chrono>
@@ -23,16 +24,16 @@ class ppu {
 			unsigned char lcdon = (_mmu->PaccessAt(0xFF40) & (1 << 7));
 			if (lcdon)
 			{
-//				printf("lcdon\n");
+//				PRINT_DEBUG("lcdon");
 				if (_off == true)
 					_off = false;
 				if (_oncyc)
 				{
 					_oncyc = (cyc > _oncyc) ? 0 : _oncyc - cyc;
-//					printf("_oncyc %u\n", _oncyc);
+//					PRINT_DEBUG("_oncyc %u", _oncyc);
 					if (!_oncyc)
 					{
-//						printf("statup\n");
+//						PRINT_DEBUG("statup");
 						palletcalc();
 						_mmu->STATupdate(2);
 					}
@@ -41,7 +42,7 @@ class ppu {
 			}
 			else
 			{
-//				printf("lcdoff\n");
+//				PRINT_DEBUG("lcdoff");
 				if (_off == false)
 				{
 					_off = true;

@@ -1,3 +1,4 @@
+#include "print_debug.hpp"
 #include "ppu.hpp"
 #define LCDC 0xFF40
 #define STAT 0xFF41
@@ -78,7 +79,7 @@ void	ppu::_cycle(bool repeat)
 			_cycle(false);
 		return;
 	}
-//	printf("ppu %u cycles: %u\n", _mmu->PaccessAt(STAT) & 3, _cycles);
+//	PRINT_DEBUG("ppu %u cycles: %u", _mmu->PaccessAt(STAT) & 3, _cycles);
 
 //	In mode 2 the PPU scans OAM to find sprites that appear on the current
 //	scanline. It can only display up to 10 sprites on any given line so checks
@@ -95,24 +96,24 @@ void	ppu::_cycle(bool repeat)
 			unsigned short addr = (0xFE00 + (cstate++ * 4));
 			unsigned char y = _mmu->PaccessAt(addr);
 			unsigned char ssize = (_mmu->PaccessAt(LCDC) & (1 << 2)) ? 16 : 8;
-//			printf("ssize %u 0 < %u && %u < 160 && %u <= %u && %u <= %u\n", ssize, y, y, y, _y + 16, _y + 16, y + ssize);
+//			PRINT_DEBUG("ssize %u 0 < %u && %u < 160 && %u <= %u && %u <= %u", ssize, y, y, y, _y + 16, _y + 16, y + ssize);
 			if (0 < y && y < 160 && y <= _y + 16 && _y + 16 <=y + ssize)
 			{
-//				printf("yes\n");
+//				PRINT_DEBUG("yes");
 				spriteattr[spritecount][SPRITE_Y] = y;
 				spriteattr[spritecount][SPRITE_X] = _mmu->PaccessAt(addr + 1);
 				spriteattr[spritecount][SPRITE_T] = _mmu->PaccessAt(addr + 2);
 				spriteattr[spritecount][SPRITE_A] = _mmu->PaccessAt(addr + 3);
 				spritecount++;
-//				printf("x %u y %u t %u\n", spriteattr[spritecount][SPRITE_X], spriteattr[spritecount][SPRITE_Y], spriteattr[spritecount][SPRITE_T]);
+//				PRINT_DEBUG("x %u y %u t %u", spriteattr[spritecount][SPRITE_X], spriteattr[spritecount][SPRITE_Y], spriteattr[spritecount][SPRITE_T]);
 			}
 		}
 		if (cstate == 40)
 		{
 //			if (spritecount)
-//				printf("line %u sprites %u\n", _y, spritecount);
+//				PRINT_DEBUG("line %u sprites %u", _y, spritecount);
 			_mmu->STATupdate(0x03);
-//			printf("Mode 3\n");
+//			PRINT_DEBUG("Mode 3");
 			cstate = 7;
 			ctile = 0;
 		}
@@ -126,7 +127,7 @@ void	ppu::_cycle(bool repeat)
 			_dclk = 6;
 			_mmu->STATupdate(0x00);
 			bwtile.flush();
-//			printf("HBlank\n");
+//			PRINT_DEBUG("HBlank");
 		}
 		else
 			drawpix();
@@ -142,7 +143,7 @@ void	ppu::_cycle(bool repeat)
 		{
 			if (_y == 154)
 				_y = 0;
-//			printf("Mode 2\n");
+//			PRINT_DEBUG("Mode 2");
 			cstate = 0;
 			_mmu->STATupdate(0x02);
 		}
@@ -189,7 +190,7 @@ void	ppu::drawpix()
 			break;
 		case 2:
 			getbyte();
-			printf("ctile %u\n", ctile);
+			PRINT_DEBUG("ctile %u", ctile);
 			ctile++;
 			if (!_x && !iswin)
 			{
@@ -252,21 +253,21 @@ void	ppu::_drawpix(bool repeat)
 		return ;
 //	unsigned char ex = (_x + sx) % 8;
 	if ((_y * 160) + _x > 23040)
-		printf("bad pix at %u %u\n", _x, _y);
+		PRINT_DEBUG("bad pix at %u %u\n", _x, _y);
 //	unsigned char i = sprite ? _x - (spriteattr[spriteindex][SPRITE_X] - 8) : 0;
 	if (sprite == true)
 	{
-		printf("_x %u sx %u\n", _x, sx);
-//		printf("lcdc & 2 %u sptile[%u] %u (!spriteattr & 1<<7 %u || !bwtile %u || !lcdc & 1 %u) %u\n", SPRITE_ON, i, sptile[i], SP_PRIO, bwtile[_x / 8][ex], BGW_ON, (!SP_PRIO || !bwtile[_x / 8][ex] || !BGW_ON));
+		PRINT_DEBUG("_x %u sx %u\n", _x, sx);
+//		PRINT_DEBUG("lcdc & 2 %u sptile[%u] %u (!spriteattr & 1<<7 %u || !bwtile %u || !lcdc & 1 %u) %u\n", SPRITE_ON, i, sptile[i], SP_PRIO, bwtile[_x / 8][ex], BGW_ON, (!SP_PRIO || !bwtile[_x / 8][ex] || !BGW_ON));
 		try {spix = sptile.getPix();}
 		catch (const char *e)
-		{printf("Sprite %s\n", e);}
-		printf("lcdc & 2 %u spix %u (!spriteattr & 1<<7 %u || !bwtile %u || !lcdc & 1 %u) %u\n", SPRITE_ON, spix, SP_PRIO, pix, BGW_ON, (!SP_PRIO || !pix || !BGW_ON));
+		{PRINT_DEBUG("Sprite %s\n", e);}
+		PRINT_DEBUG("lcdc & 2 %u spix %u (!spriteattr & 1<<7 %u || !bwtile %u || !lcdc & 1 %u) %u\n", SPRITE_ON, spix, SP_PRIO, pix, BGW_ON, (!SP_PRIO || !pix || !BGW_ON));
 	}
 //	if (sprite == true && SPRITE_ON && sptile[i] && (!SP_PRIO || !bwtile[_x / 8][ex] || !BGW_ON))
 	if (sprite == true && SPRITE_ON && spix && (!SP_PRIO || !pix || !BGW_ON))
 	{
-		printf("_x %u sx %u\n", _x, sx);
+		PRINT_DEBUG("_x %u sx %u\n", _x, sx);
 //		pixels[(_y * 160) + _x] = SP_PAL ? obp1[sptile[i]] : obp0[sptile[i]];
 		pixels[(_y * 160) + _x] = SP_PAL ? obp1[spix] : obp0[spix];
 	}
@@ -340,7 +341,7 @@ void	ppu::spritecheck()
 
 void	ppu::getsprite()
 {
-	printf("sprite\n");
+	PRINT_DEBUG("sprite");
 	unsigned ey = _y - (spriteattr[spriteindex][SPRITE_Y] - 16);
 	if (SPRITE_S)
 	{
@@ -349,13 +350,13 @@ void	ppu::getsprite()
 		if (ey < 8)
 		{
 			tilenum = SP_YFLIP ? tilenum | 0x01 : tilenum & 0xFE;
-			printf("16ey %u\n", ey);
+			PRINT_DEBUG("16ey %u", ey);
 			fetch8(ey);
 		}
 		else
 		{
 			tilenum = SP_YFLIP ? tilenum & 0xFE : tilenum | 0x01;
-			printf("16ey %u\n", ey - 8);
+			PRINT_DEBUG("16ey %u", ey - 8);
 			fetch8(ey - 8);
 		}
 	}
@@ -363,15 +364,15 @@ void	ppu::getsprite()
 	{
 		if (SP_YFLIP)
 			ey = 7 - ey;
-		printf("8ey %u\n", ey);
+		PRINT_DEBUG("8ey %u", ey);
 		fetch8(ey);
 	}
 	if (!(cstate % 2))
 	{
-		printf("sprite bufgen\n");
+		PRINT_DEBUG("sprite bufgen\n");
 		try {genBuf(sptile);}
 		catch (const char *e)
-		{printf("Sprite %s\n", e);}
+		{PRINT_DEBUG("Sprite %s\n", e);}
 		if (SP_XFLIP)
 			for (unsigned char i = 0; i < 8; i++)
 			{
@@ -384,7 +385,7 @@ void	ppu::getsprite()
 
 void	ppu::fetch8(unsigned char offset)
 {
-//	printf("x %u y %u offset %u\n", _x, _y, offset);
+//	PRINT_DEBUG("x %u y %u offset %u", _x, _y, offset);
 	if (cstate % 2)
 		tbyte[0] = _mmu->PaccessAt((0x8000 + (tilenum * 16)) + (2 * offset));
 	else
@@ -403,32 +404,36 @@ void	ppu::fetch9(unsigned char offset)
 //void	ppu::genBuf(unsigned char *t)
 void	ppu::genBuf(laz_e t)
 {
-//	printf("bufgen\n");
+//#ifdef DEBUG_PRINT_ON
+//	PRINT_DEBUG("bufgen");
 //	for (unsigned i = 0; i < 8; i++)
 //		printf("%u", (tbyte[0] & (1 << i)) ? 1 : 0);
 //	printf(" ");
 //	for (unsigned i = 0; i < 8; i++)
 //		printf("%u", (tbyte[1] & (1 << i)) ? 1 : 0);
 //	printf("\n");
+//#endif
 	if (t[0] != 0xFF)
 		throw "Error: buffer not empty";
 	for (unsigned char i = 0; i < 8; i++)
 	{
 		t[i] = ((tbyte[0] >> (7 - i) & 1)) | (((tbyte[1] >> (7 - i)) & 1) << 1);
-//		printf("%u ", t[i]);
+//		PRINT_DEBUG("%u ", t[i]);
 	}
+//#ifdef DEBUG_PRINT_ON
 //	printf("\n");
+//#endif
 }
 
 void	ppu::palletcalc()
 {
-//	printf("pallette gen\n");
+//	PRINT_DEBUG("pallette gen");
 	unsigned char _bgp = _mmu->PaccessAt(BGP);
 	unsigned char _obp0 = _mmu->PaccessAt(OBP0);
 	unsigned char _obp1 = _mmu->PaccessAt(OBP1);
-//	printf("ctab:\n");
+//	PRINT_DEBUG("ctab:");
 //	for (int i = 0; i < 4; i++)
-//		printf("\t0x%08X\n", ctab[i]);
+//		PRINT_DEBUG("\t0x%08X", ctab[i]);
 	bgp[0] = ctab[_bgp & 0x03];
 	bgp[1] = ctab[(_bgp >> 2) & 0x03];
 	bgp[2] = ctab[(_bgp >> 4) & 0x03];
@@ -441,19 +446,19 @@ void	ppu::palletcalc()
 	obp1[1] = ctab[(_obp1 >> 2) & 0x03];
 	obp1[2] = ctab[(_obp1 >> 4) & 0x03];
 	obp1[3] = ctab[(_obp1 >> 6) & 0x03];
-//	printf("bgp: ");
+//	PRINT_DEBUG("bgp: ");
 //	for (unsigned char i = 0; i < 8; i++)
 //		printf("%u", (_bgp & (1 << i)) ? 1 : 0);
 //	printf("\n");
 //	for (unsigned char i = 0; i < 4; i++)
 //		printf("\t0x%08X\n", bgp[i]);
-//	printf("obp0: ");
+//	PRINT_DEBUG("obp0: ");
 //	for (unsigned char i = 0; i < 8; i++)
 //		printf("%u", (_obp0 & (1 << i)) ? 1 : 0);
 //	printf("\n");
 //	for (unsigned char i = 0; i < 4; i++)
 //		printf("\t0x%08X\n", obp0[i]);
-//	printf("obp1: ");
+//	PRINT_DEBUG("obp1: ");
 //	for (unsigned char i = 0; i < 8; i++)
 //		printf("%u", (_obp1 & (1 << i)) ? 1 : 0);
 //	printf("\n");

@@ -1,5 +1,6 @@
 #ifndef MEM
 #define MEM
+#include "print_debug.hpp"
 #include "cart.hpp"
 #include <SDL2/SDL.h>
 #include <vector>
@@ -51,7 +52,7 @@ class mmu {
 			unsigned short byte = (640 - _oamtime) / 4;
 			writeTo(0xFE00 + byte, PaccessAt(((unsigned char)_IOReg[0x46] << 8) + byte));
 			_oamtime = _oamtime - 4;
-//			printf("_oamtime %u\n", _oamtime);
+//			PRINT_DEBUG("_oamtime %u", _oamtime);
 		}
 		unsigned char	_cgb_mode;
 		bool			vramWrite;
