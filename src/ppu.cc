@@ -164,6 +164,7 @@ void	ppu::_cycle(bool repeat)
 // in the README about the nitty gritty details as well as
 // the reddit post linked in the README that details how
 // sprite timing works.
+
 void	ppu::drawpix()
 {
 	sx = _mmu->PaccessAt(SCX);
@@ -295,7 +296,6 @@ void	ppu::spritecheck()
 				unsigned char sub = iswin ? (255 - wx) % 8 : sx % 8;
 				_sclk -= (sub > 5) ? 5 : sub;
 				sprite = true;
-				ctile--;
 				return ;
 			}
 	}
