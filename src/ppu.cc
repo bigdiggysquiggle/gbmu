@@ -45,12 +45,14 @@ ppu::ppu(std::shared_ptr<mmu> mem, unsigned char type) : _mmu(mem)
 	spritecount = 0;
 	_cycles = 0;
 	_oncyc = 70224;
-	_dclk = 0;
+	_dclk = 6;
 	_sclk = 0;
 	ctab[0] = 0x00FFFFFF;
 	ctab[1] = 0x00AAAAAA;
 	ctab[2] = 0x00555555;
 	ctab[3] = 0x00000000;
+	bwtile.setSize(8);
+	sptile.setSize(8);
 	(void)type;
 	//TODO: factory method to generate different ppus
 }
@@ -121,7 +123,9 @@ void	ppu::_cycle(bool repeat)
 		if (_x == 160)
 		{
 			spritecount = 0;
+			_dclk = 6;
 			_mmu->STATupdate(0x00);
+			bwtile.flush();
 //			printf("HBlank\n");
 		}
 		else
@@ -172,6 +176,7 @@ void	ppu::drawpix()
 	wx = _mmu->PaccessAt(WX);
 	wy = _mmu->PaccessAt(WY);
 	lcdc = _mmu->PaccessAt(LCDC);
+	_drawpix(true);
 	switch (cstate)
 	{
 		case 0:
@@ -185,10 +190,21 @@ void	ppu::drawpix()
 		case 2:
 			getbyte();
 			printf("ctile %u\n", ctile);
-			genBuf(bwtile[ctile++]);
-			cstate = (_dclk && !iswin) ? 0 : cstate + 1;
+			ctile++;
+			if (!_x && !iswin)
+			{
+				try{genBuf(bwtile);}
+				catch (const char *e)
+				{printf("BG %s\n", e);}
+				cstate = 0;
+			}
+			else
+				cstate++;
 			break;
 		case 3:
+			try{genBuf(bwtile);}
+			catch (const char *e)
+			{printf("BG %s\n", e);}
 			spritecheck();
 			break;
 		case 4:
@@ -201,21 +217,30 @@ void	ppu::drawpix()
 			break;
 		case 6:
 			getsprite();
-			if (_sclk > 1)
-				return ;
 			cstate = 0;
 			break;
 		case 7:
-			_dclk = 6 + (sx % 8);
+			_dclk = _dclk + (sx % 8);
 			gettnum();
 			cstate = 1;
 			break;
 	}
-	_drawpix(true);
 }
 
 void	ppu::_drawpix(bool repeat)
 {
+	if (_sclk)
+	{
+		_sclk--;
+		if (repeat)
+			_drawpix(false);
+		return ;
+	}
+	unsigned char pix;
+	unsigned char spix = 0;
+	try {pix = bwtile.getPix();}
+	catch (const char *e)
+	{printf("BG %s\n", e);}
 	if (_dclk)
 	{
 		_dclk--;
@@ -225,27 +250,37 @@ void	ppu::_drawpix(bool repeat)
 	}
 	if (_x == 160)
 		return ;
-	unsigned char ex = (_x + sx) % 8;
+//	unsigned char ex = (_x + sx) % 8;
 	if ((_y * 160) + _x > 23040)
 		printf("bad pix at %u %u\n", _x, _y);
-	unsigned char i = sprite ? _x - (spriteattr[spriteindex][SPRITE_X] - 8) : 0;
+//	unsigned char i = sprite ? _x - (spriteattr[spriteindex][SPRITE_X] - 8) : 0;
 	if (sprite == true)
 	{
-		printf("_x %u sx %u ex %u i %u\n", _x, sx, ex, i);
-		printf("lcdc & 2 %u sptile[%u] %u (!spriteattr & 1<<7 %u || !bwtile %u || !lcdc & 1 %u) %u\n", SPRITE_ON, i, sptile[i], SP_PRIO, bwtile[_x / 8][ex], BGW_ON, (!SP_PRIO || !bwtile[_x / 8][ex] || !BGW_ON));
+		printf("_x %u sx %u\n", _x, sx);
+//		printf("lcdc & 2 %u sptile[%u] %u (!spriteattr & 1<<7 %u || !bwtile %u || !lcdc & 1 %u) %u\n", SPRITE_ON, i, sptile[i], SP_PRIO, bwtile[_x / 8][ex], BGW_ON, (!SP_PRIO || !bwtile[_x / 8][ex] || !BGW_ON));
+		try {spix = sptile.getPix();}
+		catch (const char *e)
+		{printf("Sprite %s\n", e);}
+		printf("lcdc & 2 %u spix %u (!spriteattr & 1<<7 %u || !bwtile %u || !lcdc & 1 %u) %u\n", SPRITE_ON, spix, SP_PRIO, pix, BGW_ON, (!SP_PRIO || !pix || !BGW_ON));
 	}
-	if (sprite == true && SPRITE_ON && sptile[i] && (!SP_PRIO || !bwtile[_x / 8][ex] || !BGW_ON))
+//	if (sprite == true && SPRITE_ON && sptile[i] && (!SP_PRIO || !bwtile[_x / 8][ex] || !BGW_ON))
+	if (sprite == true && SPRITE_ON && spix && (!SP_PRIO || !pix || !BGW_ON))
 	{
-		printf("_x %u sx %u ex %u i %u\n", _x, sx, ex, i);
-		pixels[(_y * 160) + _x] = SP_PAL ? obp1[sptile[i]] : obp0[sptile[i]];
+		printf("_x %u sx %u\n", _x, sx);
+//		pixels[(_y * 160) + _x] = SP_PAL ? obp1[sptile[i]] : obp0[sptile[i]];
+		pixels[(_y * 160) + _x] = SP_PAL ? obp1[spix] : obp0[spix];
 	}
 	else if (BGW_ON)
-		pixels[(_y * 160) + _x] = bgp[bwtile[_x / 8][ex]];
+//		pixels[(_y * 160) + _x] = bgp[bwtile[_x / 8][ex]];
+		pixels[(_y * 160) + _x] = bgp[pix];
 	else
 		pixels[(_y * 160) + _x] = 0x00FFFFFF;
 	_x++;
-	if (i >= 7 || _x == 160)
+	if (sptile[0] == 0xFF || _x == 160)
+	{
 		sprite = false;
+		sptile.flush();
+	}
 	if (repeat == true)
 		_drawpix(false);
 }
@@ -284,7 +319,7 @@ void	ppu::getbyte()
 
 void	ppu::spritecheck()
 {
-	if (spritecount && SPRITE_ON)
+	if (!sprite && spritecount && SPRITE_ON)
 	{
 		unsigned ex = _x + 8;
 		for (unsigned char i = 0; i < spritecount; i++)
@@ -334,7 +369,9 @@ void	ppu::getsprite()
 	if (!(cstate % 2))
 	{
 		printf("sprite bufgen\n");
-		genBuf(sptile);
+		try {genBuf(sptile);}
+		catch (const char *e)
+		{printf("Sprite %s\n", e);}
 		if (SP_XFLIP)
 			for (unsigned char i = 0; i < 8; i++)
 			{
@@ -343,7 +380,6 @@ void	ppu::getsprite()
 				sptile[7 - i] = t;
 			}
 	}
-	_sclk -= 2;
 }
 
 void	ppu::fetch8(unsigned char offset)
@@ -364,7 +400,8 @@ void	ppu::fetch9(unsigned char offset)
 		tbyte[1] = _mmu->PaccessAt(1 + ((0x9000 + (tn * 16)) + (2 * offset)));
 }
 
-void	ppu::genBuf(unsigned char *t)
+//void	ppu::genBuf(unsigned char *t)
+void	ppu::genBuf(laz_e t)
 {
 //	printf("bufgen\n");
 //	for (unsigned i = 0; i < 8; i++)
@@ -373,6 +410,8 @@ void	ppu::genBuf(unsigned char *t)
 //	for (unsigned i = 0; i < 8; i++)
 //		printf("%u", (tbyte[1] & (1 << i)) ? 1 : 0);
 //	printf("\n");
+	if (t[0] != 0xFF)
+		throw "Error: buffer not empty";
 	for (unsigned char i = 0; i < 8; i++)
 	{
 		t[i] = ((tbyte[0] >> (7 - i) & 1)) | (((tbyte[1] >> (7 - i)) & 1) << 1);

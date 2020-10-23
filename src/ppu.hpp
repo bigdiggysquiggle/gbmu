@@ -1,6 +1,7 @@
 #ifndef PPU
 #define PPU
 #include "mmu.hpp"
+#include "lazy.hpp"
 #include <chrono>
 #include <iostream>
 #include <SDL2/SDL.h>
@@ -49,7 +50,7 @@ class ppu {
 					_oncyc = 70224;
 					_cycles = 0;
 					spritecount = 0;
-					_dclk = 0;
+					_dclk = 6;
 					_y = 0;
 					_x = 0;
 					cstate = 0;
@@ -80,13 +81,15 @@ class ppu {
 		unsigned char spritecount;
 		unsigned char spriteindex;
 		unsigned char spriteattr[10][4];
-		unsigned char sptile[8];
+		laz_e		  sptile;
+//		unsigned char sptile[8];
 		bool		  sprite;
 
 		unsigned char tilenum;
 		bool	iswin;
 		unsigned char tbyte[2];
-		unsigned char bwtile[22][8];
+		laz_e		  bwtile;
+//		unsigned char bwtile[22][8];
 		unsigned char ctile;
 
 		unsigned ctab[4];
@@ -101,7 +104,8 @@ class ppu {
 		void	spritecheck();
 		void	getsprite();
 		void	getbyte();
-		void	genBuf(unsigned char *);
+//		void	genBuf(unsigned char *);
+		void	genBuf(laz_e);
 		void	fetch8(unsigned char);
 		void	fetch9(unsigned char);
 		void	palletcalc();
