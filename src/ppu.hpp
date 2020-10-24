@@ -101,6 +101,7 @@ class ppu {
 		void	_cycle(bool);
 		void	drawpix();
 		void	_drawpix(bool);
+		void	_spritebranch();
 		void	gettnum();
 		void	spritecheck();
 		void	getsprite();

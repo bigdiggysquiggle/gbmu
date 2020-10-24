@@ -114,7 +114,7 @@ void	ppu::_cycle(bool repeat)
 //				PRINT_DEBUG("line %u sprites %u", _y, spritecount);
 			_mmu->STATupdate(0x03);
 //			PRINT_DEBUG("Mode 3");
-			cstate = 7;
+			cstate = 4;
 			ctile = 0;
 		}
 	}
@@ -177,50 +177,46 @@ void	ppu::drawpix()
 	wx = _mmu->PaccessAt(WX);
 	wy = _mmu->PaccessAt(WY);
 	lcdc = _mmu->PaccessAt(LCDC);
+	if (_sclk > 1)
+	{
+		_spritebranch();
+		return ;
+	}
 	_drawpix(true);
 	switch (cstate)
 	{
 		case 0:
 			gettnum();
+			PRINT_DEBUG("tnum ctile %u", ctile);
 			cstate++;
 			break;
 		case 1:
 			getbyte();
+			PRINT_DEBUG("byte1");
 			cstate++;
 			break;
 		case 2:
 			getbyte();
-			PRINT_DEBUG("ctile %u", ctile);
+			PRINT_DEBUG("byte2");
 			ctile++;
 			if (!_x && !iswin)
 			{
 				try{genBuf(bwtile);}
 				catch (const char *e)
-				{printf("BG %s\n", e);}
+				{PRINT_DEBUG("BG %s", e);}
 				cstate = 0;
 			}
 			else
 				cstate++;
 			break;
 		case 3:
+			PRINT_DEBUG("tgen");
 			try{genBuf(bwtile);}
 			catch (const char *e)
-			{printf("BG %s\n", e);}
+			{PRINT_DEBUG("BG %s", e);}
 			spritecheck();
 			break;
 		case 4:
-			tilenum = spriteattr[spriteindex][SPRITE_T];
-			cstate++;
-			break;
-		case 5:
-			getsprite();
-			cstate++;
-			break;
-		case 6:
-			getsprite();
-			cstate = 0;
-			break;
-		case 7:
 			_dclk = _dclk + (sx % 8);
 			gettnum();
 			cstate = 1;
@@ -228,20 +224,36 @@ void	ppu::drawpix()
 	}
 }
 
+void	ppu::_spritebranch()
+{
+	if (_sclk > 1)
+		_sclk -= 2;
+	switch (cstate)
+	{
+		case 1:
+			PRINT_DEBUG("spbyte1");
+			getsprite();
+			cstate++;
+			break;
+		case 2:
+			PRINT_DEBUG("spbyte2");
+			getsprite();
+			cstate = (_sclk > 1) ? 3 : 0;
+			break;
+		case 3:
+			cstate = (_sclk > 1) ? 3 : 0;
+			PRINT_DEBUG("spstall %u", cstate);
+			break;
+	}
+}
+
 void	ppu::_drawpix(bool repeat)
 {
-	if (_sclk)
-	{
-		_sclk--;
-		if (repeat)
-			_drawpix(false);
-		return ;
-	}
 	unsigned char pix;
 	unsigned char spix = 0;
 	try {pix = bwtile.getPix();}
 	catch (const char *e)
-	{printf("BG %s\n", e);}
+	{PRINT_DEBUG("BG %s", e);}
 	if (_dclk)
 	{
 		_dclk--;
@@ -253,21 +265,21 @@ void	ppu::_drawpix(bool repeat)
 		return ;
 //	unsigned char ex = (_x + sx) % 8;
 	if ((_y * 160) + _x > 23040)
-		PRINT_DEBUG("bad pix at %u %u\n", _x, _y);
+		PRINT_DEBUG("bad pix at %u %u", _x, _y);
 //	unsigned char i = sprite ? _x - (spriteattr[spriteindex][SPRITE_X] - 8) : 0;
 	if (sprite == true)
 	{
-		PRINT_DEBUG("_x %u sx %u\n", _x, sx);
-//		PRINT_DEBUG("lcdc & 2 %u sptile[%u] %u (!spriteattr & 1<<7 %u || !bwtile %u || !lcdc & 1 %u) %u\n", SPRITE_ON, i, sptile[i], SP_PRIO, bwtile[_x / 8][ex], BGW_ON, (!SP_PRIO || !bwtile[_x / 8][ex] || !BGW_ON));
+		PRINT_DEBUG("_x %u sx %u", _x, sx);
+//		PRINT_DEBUG("lcdc & 2 %u sptile[%u] %u (!spriteattr & 1<<7 %u || !bwtile %u || !lcdc & 1 %u) %u", SPRITE_ON, i, sptile[i], SP_PRIO, bwtile[_x / 8][ex], BGW_ON, (!SP_PRIO || !bwtile[_x / 8][ex] || !BGW_ON));
 		try {spix = sptile.getPix();}
 		catch (const char *e)
-		{PRINT_DEBUG("Sprite %s\n", e);}
-		PRINT_DEBUG("lcdc & 2 %u spix %u (!spriteattr & 1<<7 %u || !bwtile %u || !lcdc & 1 %u) %u\n", SPRITE_ON, spix, SP_PRIO, pix, BGW_ON, (!SP_PRIO || !pix || !BGW_ON));
+		{PRINT_DEBUG("Sprite %s", e);}
+		PRINT_DEBUG("lcdc & 2 %u spix %u (!spriteattr & 1<<7 %u || !bwtile %u || !lcdc & 1 %u) %u", SPRITE_ON, spix, SP_PRIO, pix, BGW_ON, (!SP_PRIO || !pix || !BGW_ON));
 	}
 //	if (sprite == true && SPRITE_ON && sptile[i] && (!SP_PRIO || !bwtile[_x / 8][ex] || !BGW_ON))
 	if (sprite == true && SPRITE_ON && spix && (!SP_PRIO || !pix || !BGW_ON))
 	{
-		PRINT_DEBUG("_x %u sx %u\n", _x, sx);
+		PRINT_DEBUG("_x %u sx %u", _x, sx);
 //		pixels[(_y * 160) + _x] = SP_PAL ? obp1[sptile[i]] : obp0[sptile[i]];
 		pixels[(_y * 160) + _x] = SP_PAL ? obp1[spix] : obp0[spix];
 	}
@@ -326,17 +338,17 @@ void	ppu::spritecheck()
 		for (unsigned char i = 0; i < spritecount; i++)
 			if (!sprite && spriteattr[i][SPRITE_X] <= ex && ex < (spriteattr[i][SPRITE_X] + 8))
 			{
-				cstate = 4;
 				spriteindex = i;
 				_sclk = 9; //the first two cycles are happening here
 				unsigned char sub = iswin ? (255 - wx) % 8 : sx % 8;
 				_sclk -= (sub > 5) ? 5 : sub;
 				sprite = true;
-				return ;
+				tilenum = spriteattr[spriteindex][SPRITE_T];
+				cstate = 1;
+				return;
 			}
 	}
 	cstate = 0;
-	sprite = false;
 }
 
 void	ppu::getsprite()
@@ -369,10 +381,10 @@ void	ppu::getsprite()
 	}
 	if (!(cstate % 2))
 	{
-		PRINT_DEBUG("sprite bufgen\n");
+		PRINT_DEBUG("sprite bufgen");
 		try {genBuf(sptile);}
 		catch (const char *e)
-		{PRINT_DEBUG("Sprite %s\n", e);}
+		{PRINT_DEBUG("Sprite %s", e);}
 		if (SP_XFLIP)
 			for (unsigned char i = 0; i < 8; i++)
 			{
