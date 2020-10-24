@@ -29,6 +29,7 @@
 // 0xFF00 - 0xFF7F IO
 // - hardware mapped registers and such
 // - this is where the actual hardware behaviour is configured
+//   and where info about hardware can be read
 // 0xFF80 - 0xFFFE hram
 // - slightly faster than other ram. 
 
@@ -50,7 +51,8 @@ class mmu {
 		inline void	dmaTransfer()
 		{
 			unsigned short byte = (640 - _oamtime) / 4;
-			writeTo(0xFE00 + byte, PaccessAt(((unsigned char)_IOReg[0x46] << 8) + byte));
+//			writeTo(0xFE00 + byte, PaccessAt(((unsigned short)_IOReg[0x46] << 8) + byte));
+			_oam[byte] = PaccessAt(((unsigned short)_IOReg[0x46] << 8) + byte);
 			_oamtime = _oamtime - 4;
 //			PRINT_DEBUG("_oamtime %u", _oamtime);
 		}
