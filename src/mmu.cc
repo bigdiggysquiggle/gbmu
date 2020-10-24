@@ -517,24 +517,26 @@ void	mmu::timerInc(unsigned cycles)
 	_tac0 += cycles;
 	if (_clock >= 256)
 	{
-//		PRINT_DEBUG("Clock inc");
 		_IOReg[0x04] += 1;
+		PRINT_DEBUG("Clock inc %u", _IOReg[0x04]);
+		PRINT_DEBUG("tac %X", tac);
 		_clock -= 256;
 	}
 	if (!(tac & (1 << 2)))
 		return ;
 	tac &= 0x03;
+	printf("timatab %u", tac);
 	if (_tac0 >= timatab[tac])
 	{
 		if (_IOReg[0x05] == 0xFF)
 		{
 			_IOReg[0x0F] |= (1 << 2);
 			_IOReg[0x05] = _IOReg[0x06];
-//			PRINT_DEBUG("INT set");
+			PRINT_DEBUG("INT set");
 		}
 		else
 		{
-//			PRINT_DEBUG("Timer inc");
+			PRINT_DEBUG("Timer inc");
 			_IOReg[0x05] += 1;
 		}
 		while (_tac0 >= timatab[tac])
