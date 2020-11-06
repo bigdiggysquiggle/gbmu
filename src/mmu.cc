@@ -285,9 +285,9 @@ void mmu::pollInput(void)
 
 void mmu::loadCart(char *filename)
 {
-	cart _cart;
+	cart _tmp;
 	_IOReg[0x50] = 0xFE;
-	_rom = _cart.loadCart(filename);
+	_cart = _tmp.loadCart(filename);
 }
 
 //bit values for each type of interrupt:
@@ -331,7 +331,7 @@ unsigned char	mmu::PaccessAt(unsigned short addr)
 //	PRINT_DEBUG("PAccessing 0x%04x", addr);
 	unsigned char	val;
 	if (addr <= 0x7FFF || (0xA000 <= addr && addr <= 0xBFFF))
-		val = _rom->readFrom(addr);
+		val = _cart->readFrom(addr);
 	if (0xE000 <= addr && addr <= 0xFDFF)
 		val = 0xFF;
 	else if (0x8000 <= addr && addr <= 0x9FFF)
@@ -371,8 +371,8 @@ unsigned char	mmu::accessAt(unsigned short addr)
 		if ((addr < 0x100) && !(_IOReg[0x50] & 0x01))
 			val = _booter[addr];
 		else
-			val = _rom->readFrom(addr);
-		//val = ((addr < 0x100) && (_IOReg[0x50] == 0x01)) ?_rom->readFrom(addr) : _booter[addr];
+			val = _cart->readFrom(addr);
+		//val = ((addr < 0x100) && (_IOReg[0x50] == 0x01)) ?_cart->readFrom(addr) : _booter[addr];
 	}
 	else if (0x8000 <= addr && addr <= 0x9FFF)
 	{
@@ -452,9 +452,9 @@ void	mmu::_IOwrite(unsigned short addr, unsigned char msg)
 
 void	mmu::writeTo(unsigned short addr, unsigned char msg)
 {
-//	PRINT_DEBUG("write 0x%02hhx to 0x%04hx", msg, addr);
+//	printf("write 0x%02hhx to 0x%04hx\n", msg, addr);
 	if ((_IOReg[0x50] & 1) && (addr <= 0x7FFF || (0xA000 <= addr && addr <= 0xBFFF)))
-		_rom->writeTo(addr, msg);
+		_cart->writeTo(addr, msg);
 	else if (0x8000 <= addr && addr <= 0x9FFF)
 	{
 		if ((_IOReg[0x41] & 0x03) < 0x03)
@@ -463,7 +463,7 @@ void	mmu::writeTo(unsigned short addr, unsigned char msg)
 			vramWrite = true;
 		}
 		else
-			printf("Bad vram access\n");
+			PRINT_DEBUG("Bad vram access\n");
 	}
 	else if (0xC000 <= addr && addr <= 0xCFFF)
 		_wram0[addr - 0xC000] = msg;
@@ -518,25 +518,25 @@ void	mmu::timerInc(unsigned cycles)
 	if (_clock >= 256)
 	{
 		_IOReg[0x04] += 1;
-		PRINT_DEBUG("Clock inc %u", _IOReg[0x04]);
-		PRINT_DEBUG("tac %X", tac);
+//		PRINT_DEBUG("Clock inc %u", _IOReg[0x04]);
+//		PRINT_DEBUG("tac %X", tac);
 		_clock -= 256;
 	}
 	if (!(tac & (1 << 2)))
 		return ;
 	tac &= 0x03;
-	printf("timatab %u", tac);
+//	printf("timatab %u", tac);
 	if (_tac0 >= timatab[tac])
 	{
 		if (_IOReg[0x05] == 0xFF)
 		{
 			_IOReg[0x0F] |= (1 << 2);
 			_IOReg[0x05] = _IOReg[0x06];
-			PRINT_DEBUG("INT set");
+//			PRINT_DEBUG("INT set");
 		}
 		else
 		{
-			PRINT_DEBUG("Timer inc");
+//			PRINT_DEBUG("Timer inc");
 			_IOReg[0x05] += 1;
 		}
 		while (_tac0 >= timatab[tac])

@@ -26,3 +26,7 @@ implement sound
 
 sprite printing needs to be ironed out as it is the main issue
 fucking up the rest of my graphics
+
+it seems that certain conditions don't get met properly
+resulting in my emulator not properly following the cpu-instr
+testrom

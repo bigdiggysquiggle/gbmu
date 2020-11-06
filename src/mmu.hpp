@@ -63,7 +63,7 @@ class mmu {
 		//				FF70 and FF4F cgb modes
 
 	private:
-		std::unique_ptr<cart>	_rom;
+		std::unique_ptr<cart>	_cart;
 		std::vector<std::array<unsigned char, 0x2000>>	_vram;
 		unsigned char	_wram0[0x1000];
 		std::vector<std::array<unsigned char, 0x1000>>	_wram1;

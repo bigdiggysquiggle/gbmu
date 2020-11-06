@@ -1064,6 +1064,7 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 				addr.addr = 0xFF00 + _mmu->accessAt(_registers.pc++);
 				cycle();
 			}
+		}
 		if ((opcode & 0xF0) == 0xF0)
 		{
 			ld(&_registers.a, _mmu->accessAt(addr.addr));
@@ -1071,7 +1072,6 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 		}
 		else
 			ld(addr, _registers.a);
-		}
 	}
 	else if (X(opcode) == 0 && Z(opcode) == 2)//LD reg pair into/out of a. dec/inc hl if needed
 	{
