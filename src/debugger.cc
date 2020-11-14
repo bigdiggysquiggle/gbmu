@@ -705,10 +705,11 @@ void	debuggerator::frame_advance()
 		cyc = _cpu->opcode_parse();
 //		PRINT_DEBUG("cyc = %u", cyc);
 //		_mmu->timerInc(cyc);
-		_cycles += cyc;
+		if (_cpu->_registers.pc > 0x100)
+			_cycles += cyc;
 		framecount += cyc;
-		if (_cycles >= CPU_FREQ)
-			_cycles -= CPU_FREQ;
+//		if (_cycles >= CPU_FREQ)
+//			_cycles -= CPU_FREQ;
 	}
 //	for (unsigned i = 0; i < 23040; i++)
 //		PRINT_DEBUG("0x%08X", _ppu->pixels[23040]);
