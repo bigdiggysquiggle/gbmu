@@ -2,6 +2,7 @@
 #define GBDEBUGCLASS
 #include "gb.hpp"
 #include <fcntl.h>
+#include <unistd.h>
 
 //Exists as an extension of the gb class. Designed this way in
 //order to simplify hardware and memory access.
@@ -42,6 +43,7 @@ struct	s_debugmsg
 class debuggerator : public gb {
 	public:
 		debuggerator();
+		~debuggerator();
 		debuggerator(sys_type type);
 		void	setflags(int ac, char **av);
 		void	cpu_print();

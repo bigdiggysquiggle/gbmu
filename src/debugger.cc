@@ -560,6 +560,12 @@ debuggerator::debuggerator(sys_type type) : gb(type)
 	output_file = 0;
 }
 
+debuggerator::~debuggerator()
+{
+	if (output_file > 1)
+		close(output_file);
+}
+
 void	debuggerator::setflags(int ac, char **av)
 {
 	for (int i = 0; i < ac; i++)
@@ -646,6 +652,7 @@ void	debuggerator::cpu_print()
 		}
 		else
 			dprintf(output_file, "        %s", db.str);
+		dprintf(output_file, "\n");
 	}
 	else
 	{
