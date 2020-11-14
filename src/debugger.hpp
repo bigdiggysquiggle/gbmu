@@ -24,6 +24,9 @@
 //
 //Note: currently vram and mmu are unimplemented options. I'm
 //not sure how I want to implement them at this time.
+//
+//Planned features: breakpoints, interactive mode, memory and
+//vram viewing
 
 enum flagset {output_file = 1, output_format = 2, output_data = 4};
 enum dataflags {cpu_instrs = 1, ppu_mode = 2, ppu_state = 4, ppu_vram = 8, mmu_access = 16};
