@@ -2,11 +2,6 @@
 #include "gb.hpp"
 #include <SDL2/SDL.h>
 
-#define WIN_WIDTH 160
-#define WIN_HEIGHT 144
-#define CPU_FREQ 4194304
-#define FRAME_TIME 70224
-
 //Designed to contain the classes that make up the
 //individual pieces of hardware inside of an actual
 //gameboy. Makes it easy to generate different types

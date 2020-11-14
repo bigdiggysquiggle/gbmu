@@ -58,6 +58,7 @@ class cart {
 		virtual void writeTo(unsigned short, unsigned char);
 		virtual unsigned char readFrom(unsigned short);
 		unsigned char	GBbit;
+		virtual unsigned char	getBank(unsigned short);
 	protected:
 //		std::vector<unsigned char[0x4000]> _romSpace;
 //		std::vector<unsigned char[0x2000]> _ramSpace;
@@ -104,6 +105,7 @@ class mbc1 : virtual public cart{
 		mbc1(unsigned romBanks, unsigned ramBanks, FILE *rom);
 		void	writeTo(unsigned short, unsigned char);
 		unsigned char	readFrom(unsigned short);
+		unsigned char	getBank(unsigned short);
 	private:
 		unsigned char	_ramg;
 		unsigned char	_bank1;
@@ -126,6 +128,7 @@ class mbc2 : virtual public cart{
 		mbc2(unsigned romBanks, unsigned ramBanks, FILE *rom);
 		void	writeTo(unsigned short, unsigned char);
 		unsigned char	readFrom(unsigned short);
+		unsigned char	getBank(unsigned short);
 	private:
 		unsigned char	_ramg;
 		unsigned char	_romg;
@@ -141,6 +144,7 @@ class mbc3 : virtual public cart{
 		mbc3(unsigned romBanks, unsigned ramBanks, FILE *rom);
 		void	writeTo(unsigned short, unsigned char);
 		unsigned char	readFrom(unsigned short);
+		unsigned char	getBank(unsigned short);
 	private:
 		unsigned char	_ramg;
 		unsigned char	_rombank;
@@ -177,6 +181,7 @@ class mbc5 : virtual public cart{
 		mbc5(unsigned romBanks, unsigned ramBanks, FILE *rom);
 		void	writeTo(unsigned short, unsigned char);
 		unsigned char	readFrom(unsigned short);
+		unsigned char	getBank(unsigned short);
 	private:
 		unsigned char	_ramg;
 		unsigned char	_bank1;

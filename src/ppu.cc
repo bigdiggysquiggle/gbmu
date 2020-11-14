@@ -309,12 +309,14 @@ void	ppu::gettnum()
 		iswin = true;
 		if (wx == ex && !_dclk)
 			_dclk = 6 + (wx % 8);
+		PRINT_DEBUG("window tile addr 0x%X", map);
 	}
 	else
 	{
 		map = BG_MAP ? 0x9C00 : 0x9800;
 		tilenum = _mmu->PaccessAt(map + ((((_y + sy) / 8) * 32) + (((ex + sx) / 8))));
 		iswin = false;
+		PRINT_DEBUG("background tile addr 0x%X", map);
 	}
 }
 
@@ -397,6 +399,7 @@ void	ppu::getsprite()
 
 void	ppu::fetch8(unsigned char offset)
 {
+	PRINT_DEBUG("8000 addressing");
 //	PRINT_DEBUG("x %u y %u offset %u", _x, _y, offset);
 	if (cstate % 2)
 		tbyte[0] = _mmu->PaccessAt((0x8000 + (tilenum * 16)) + (2 * offset));
@@ -406,6 +409,7 @@ void	ppu::fetch8(unsigned char offset)
 
 void	ppu::fetch9(unsigned char offset)
 {
+	PRINT_DEBUG("9000 addressing");
 	char tn = tilenum;
 	if (cstate % 2)
 		tbyte[0] = _mmu->PaccessAt((0x9000 + (tn * 16)) + (2 * offset));
@@ -416,7 +420,7 @@ void	ppu::fetch9(unsigned char offset)
 //void	ppu::genBuf(unsigned char *t)
 void	ppu::genBuf(laz_e t)
 {
-//#ifdef DEBUG_PRINT_ON
+//#ifdef DEBUG
 //	PRINT_DEBUG("bufgen");
 //	for (unsigned i = 0; i < 8; i++)
 //		printf("%u", (tbyte[0] & (1 << i)) ? 1 : 0);
@@ -432,7 +436,7 @@ void	ppu::genBuf(laz_e t)
 		t[i] = ((tbyte[0] >> (7 - i) & 1)) | (((tbyte[1] >> (7 - i)) & 1) << 1);
 //		PRINT_DEBUG("%u ", t[i]);
 	}
-//#ifdef DEBUG_PRINT_ON
+//#ifdef DEBUG
 //	printf("\n");
 //#endif
 }

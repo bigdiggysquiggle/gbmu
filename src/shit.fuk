@@ -1,0 +1,128 @@
+#ifndef GBDEBUGCLASS
+#define GBDEBUGCLASS
+#include "cpu.hpp"
+#include "mmu.hpp"
+#include "ppu.hpp"
+#include <iostream>
+#include <fstream>
+
+#define FTABSIZE 4
+#define DTABSIZE 6
+#define FMTABSIZE 3
+
+enum flagset {output_file = 1, output_format = 2, output_data = 4};
+enum dataflags {cpu_instrs = 1, ppu_mode = 2, ppu_state = 4, ppu_vram = 8, mmu_access = 16};
+enum formatflags {default_output, binjgb};
+
+
+
+class debuggerator {
+	public:
+		debuggerator();
+		void	setflags(int ac, char **av);
+
+	private:
+		void	setFile(int ac, char **av);
+		void	setFormat(int ac, char **av);
+		void	setData(int ac, char **av);
+
+		typedef void (f_func)(int, char **);
+		struct s_flags {
+			const char *f_string;
+			unsigned f_val;
+			f_func   f_get;
+		};
+
+		static struct s_flags flag_tab[FTABSIZE];
+		static struct s_flags data_flag_tab[DTABSIZE];
+		static struct s_flags format_tab[FMTABSIZE];
+		unsigned flags;
+		unsigned format_type;
+		unsigned output_data;
+		std::ofstream output_file;
+		int i;
+};
+
+debuggerator::debuggerator()
+{
+	flags = 0;
+	format_type = formatflags::default_output;
+	output_data = 0;
+	i = 0;
+}
+
+void	debuggerator::setflags(int ac, char **av)
+{
+	while (++i < ac)
+	{
+		for (int j = 0; flag_tab[j].f_string; j++)
+			if (!strcmp(flag_tab[j].f_string, av[i]))
+			{
+				flags |= flag_tab[j].f_val;
+				flag_tab[j].f_get(ac, av);
+				break;
+			}
+	}
+	if (!(flags & flagset::output_file))
+		output_file.open("debug_out.txt", std::ofstream::out | std::ofstream::trunc);
+}
+
+void	debuggerator::setFile(int ac, char **av)
+{
+	if (!ac)
+		throw "Error: missing file name";
+	else
+	{
+		output_file.open(av[i], std::ofstream::out | std::ofstream::trunc);
+	}
+}
+
+void	debuggerator::setFormat(int ac, char **av)
+{
+	i++;
+	if (i == ac)
+		throw "Error: missing output format";
+	else
+	{
+		for (int k = 0; format_tab[k].f_string; k++)
+			if (!strcmp(format_tab[k].f_string, av[i]))
+			{
+				format_type = format_tab[k].f_val;
+				break;
+			}
+	}
+}
+
+void	debuggerator::setData(int ac, char **av)
+{
+	while (++i < ac && av[i][0] != '-')
+	{
+		for (int k = 0; data_flag_tab[k].f_string; k++)
+			if (!strcmp(data_flag_tab[k].f_string, av[i]))
+				output_data |= data_flag_tab[k].f_val;
+	}
+}
+
+struct debuggerator::s_flags debuggerator::flag_tab[FTABSIZE] = {
+	{"-o", flagset::output_file, setFile},
+	{"-f", flagset::output_format, setFormat},
+	{"-d", flagset::output_data, setData},
+	{0, 0, 0}
+};
+
+struct debuggerator::s_flags debuggerator::data_flag_tab[DTABSIZE] = {
+	{"cpu", dataflags::cpu_instrs, 0},
+	{"mode", dataflags::ppu_mode, 0},
+	{"state", dataflags::ppu_state, 0},
+	{"vram", dataflags::ppu_vram, 0},
+	{"mmu", dataflags::mmu_access, 0},
+	{0, 0, 0}
+};
+
+struct debuggerator::s_flags debuggerator::format_tab[FMTABSIZE] = {
+	{"default", formatflags::default_output, 0},
+	{"binjgb", formatflags::binjgb, 0},
+	{0, 0, 0}
+};
+
+#endif

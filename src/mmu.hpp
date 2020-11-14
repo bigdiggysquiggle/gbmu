@@ -75,6 +75,7 @@ class mmu {
 		unsigned		_tac0;
 
 		void	_IOwrite(unsigned short, unsigned char);
+		friend class debuggerator;
 };
 
 #endif

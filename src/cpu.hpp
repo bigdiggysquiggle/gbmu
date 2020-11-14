@@ -63,18 +63,17 @@ enum bitflags {
 class cpu {
 	public:
 		cpu(std::shared_ptr<mmu>, std::shared_ptr<ppu>);
-		std::shared_ptr<mmu>	_mmu;
-		std::shared_ptr<ppu>	_ppu;
 		unsigned char	interrupt_check(void);
 		void			reset();
 		void			setInterrupt(unsigned char);
 		unsigned char	opcode_parse(unsigned char);
 		unsigned char	opcode_parse(void);
-		bool			debug;
-		unsigned		cyc;
+		unsigned long	cyc;
 //		void		checkRom(void);
 
 	private:
+		std::shared_ptr<mmu>	_mmu;
+		std::shared_ptr<ppu>	_ppu;
 		struct registers		_registers;
 		unsigned char	_inCycles;
 		bool			_halt;
@@ -239,6 +238,7 @@ class cpu {
 			_mmu->timerInc(4);
 			_ppu->cycle();
 		}
+		friend class debuggerator;
 	};
 
 #endif

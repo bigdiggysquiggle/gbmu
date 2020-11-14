@@ -63,6 +63,14 @@ class ppu {
 			}
 			return 0;
 		}
+		inline unsigned char	getMode()
+		{
+			return  (_mmu->PaccessAt(0xFF41) & 3);
+		}
+		inline unsigned char	getState()
+		{
+			return (cstate);
+		}
 		unsigned _cycles;
 		unsigned _oncyc;
 		unsigned _dclk;
@@ -111,6 +119,7 @@ class ppu {
 		void	fetch8(unsigned char);
 		void	fetch9(unsigned char);
 		void	palletcalc();
+		friend class debuggerator;
 };
 
 #endif

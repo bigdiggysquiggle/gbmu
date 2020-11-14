@@ -1,0 +1,3 @@
+#!/bin/bash
+
+g++ -I src/ src/*.cc test.cc -lSDL2

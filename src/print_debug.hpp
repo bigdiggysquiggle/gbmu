@@ -13,7 +13,7 @@
 #ifndef PRINT_DEBUG_H
 # define PRINT_DEBUG_H
 
-# ifdef DEBUG_PRINT_ON
+# ifdef DEBUG
 
 #  include <cstdio>
 #  include <unistd.h>

@@ -37,7 +37,7 @@ accurately to how they actually function on physical hardware
 as possible. The MBC serves as an intermediary between the
 ROM and the cpu, containing registers that can be written to
 in order to determine which ROM bank is currently being read
-fROM and, if applicable, which RAM bank is currently being
+from and, if applicable, which RAM bank is currently being
 used as well as whether or not the console is currently
 allowed to write to said RAM. I really admire the way Nintendo
 implemented this process. You write to an area in ROM, then
@@ -120,4 +120,4 @@ Binjgb's ability to output a stack trace made debugging my own
 emulator significantly easier. I was able to output the stack
 trace to a file, format my own stack trace indentically to
 binjgb's, and diff the files to figure out exactly where my
-emulation diverged fROM a proven emulator.
+emulation diverged from a proven emulator.

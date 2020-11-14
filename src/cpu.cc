@@ -536,6 +536,8 @@ void	cpu::halt(void)//halt waits for an IF & IE != 0
 	_halt = true;
 }
 
+//just realized my stop probably infinite loops. my b
+//reimplement in a manner similar to halt.
 void	cpu::stop(void)//check p1 bits and p1 line
 {
 	while ((_mmu->accessAt(0xFF00) & 0xFF) == 0xFF)
@@ -965,11 +967,6 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 	if (_halt == true)
 		return 4;
 	unsigned char opcode = _mmu->accessAt(_registers.pc);
-//	if (debug == true)
-//	{
-//		PRINT_DEBUG("\t\tcurrent pc: 0x%04x", _registers.pc);
-//		PRINT_DEBUG("A:%02hhX F:%C%C%C%C BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x", _registers.a, _registers.f & 0x80 ? 'Z' : '-', _registers.f & 0x40 ? 'N' : '-', _registers.f & 0x20 ? 'H' : '-', _registers.f & 0x10 ? 'C' : '-', _registers.bc, _registers.de, _registers.hl, _registers.sp, _registers.pc);
-//	}
 	unsigned char ftab[4];
 	_registers.pc += haltcheck;
 	ftab[0] = _registers.f & bitflags::z ? 0 : 1;
@@ -995,13 +992,9 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 		&_registers.de,
 		&_registers.hl,
 		&_registers.af};
-//	if (debug == true)
-//		PRINT_DEBUG("\tnz %d z %d nc %d c %d", ftab[0], ftab[1], ftab[2], ftab[3]);
 	if (opcode == 0xCB)
 	{
 		opcode = _mmu->accessAt(_registers.pc++);
-//		if (debug == true)
-//			debug_print(opcode, 1, _registers, _mmu->PaccessAt(0xFF40), _mmu->PaccessAt(0xFF41), _mmu->PaccessAt(0xFF45), _mmu->PaccessAt(0xFF44), _mmu->PaccessAt(0xFF0F), _mmu->PaccessAt(0xFFFF), _ime);
 		switch(X(opcode))
 		{
 			case 0:
@@ -1022,8 +1015,6 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 		_registers.f &= 0xF0;
 		return cyc;
 	}
-//	if (debug == true)
-//		debug_print(opcode, 0, _registers, _mmu->PaccessAt(0xFF40), _mmu->PaccessAt(0xFF41), _mmu->PaccessAt(0xFF45), _mmu->PaccessAt(0xFF44), _mmu->PaccessAt(0xFF0F), _mmu->PaccessAt(0xFFFF), _ime);
 	if (!opcode)
 		return cyc;
 	if (opcode < 0x3F && ((opcode & 0x0F) == 0x06 || (opcode & 0x0F) == 0x0E))//LD r, n
@@ -1173,9 +1164,7 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 		add(val);
 	}
 	else if (X(opcode) == 0 && Z(opcode) == 7)//RLCA RRCA RLA RRA DAA CPL SCF CCF on A
-	{
 		acctab(Y(opcode));
-	}
 	else if (opcode == 0x10)//STOP
 		stop();
 	else if (opcode == 0xF3)//DI
@@ -1229,15 +1218,6 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 		std::cerr << "Unhandled opcode: 0x" << std::hex << +opcode << std::endl;
 		exit(1);
 	}
-//	unsigned char c;
-//	if (_registers.pc >= 0x36C && _registers.pc <= 0x36F)
-//		debug = true;
-//	if (debug)
-//	{
-//		PRINT_DEBUG("step");
-//		read(0, &c, 1);
-//	}
-//	usleep(100000);
 	_registers.f &= 0xF0;
 	return cyc;
 }

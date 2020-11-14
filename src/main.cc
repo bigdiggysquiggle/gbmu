@@ -1,9 +1,5 @@
 #include <unistd.h>
-#include "cpu.hpp"
-#include "cart.hpp"
-#include "mmu.hpp"
-#include "ppu.hpp"
-#include "gb.hpp"
+#include "debugger.hpp"
 #include <exception>
 #include <iostream>
 #include <cstring>
@@ -21,11 +17,20 @@
 
 int main(int ac, char **av)
 {
-	if (ac != 2 && ac != 3)
-		return 0;
-	if (ac == 3 && strcmp("-d", av[2]))
-		return 1;
+#ifdef DEBUG_PRINT_ON
+	debuggerator _gb;
+	try {
+	_gb.setflags(ac - 2, av + 2);}
+	catch (char const *e)
+	{
+		printf("%s\n", e);
+		return (1);
+	}
+	printf("debug\n");
+#else
 	gb	_gb;
+	printf("fuck\n");
+#endif
 	try 
 	{
 		_gb.load_cart(av[1]);

@@ -96,6 +96,8 @@ std::unique_ptr<cart>	cart::loadCart(char *fname)
 	//cart reading. 0x147 mbc 0x148 romsize 0x149 ramsize
 	unsigned char	header[0x14F];
 	FILE *rom = fopen(fname, "r");
+	if (rom == NULL)
+		throw "Error: invalid rom file";
 	fseek(rom, 0, SEEK_END);
 	_romSize = ftell(rom);
 	if (_romSize < 0x14F)
@@ -167,6 +169,13 @@ unsigned char	cart::readFrom(unsigned short addr)
 	else if (_ramSpace.size() && 0xA000 <= addr && addr <= 0xBFFF)
 		return _ramSpace[0x00][addr - 0xA000];
 	return (0xFF);
+}
+
+unsigned char	cart::getBank(unsigned short addr)
+{
+	if (addr < 0x4000)
+		return 0;
+	return 1;
 }
 
 mbc1::mbc1(unsigned romBanks, unsigned ramBanks, FILE *rom)
@@ -261,6 +270,14 @@ unsigned char	mbc1::readFrom(unsigned short addr)
 	return 0xFF;
 }
 
+unsigned char	mbc1::getBank(unsigned short addr)
+{
+	if (addr < 0x4000)
+		return 0;
+	else
+		return _bank1 | (!_mode ? (_bank2 << 5) : 0);
+}
+
 mbc2::mbc2(unsigned romBanks, unsigned ramBanks, FILE *rom)
 {
 	printf("MBC2\n");
@@ -324,6 +341,13 @@ unsigned char	mbc2::_ramRead(unsigned short addr)
 		return (0xFF);
 	else
 		return (_ramSpace[0x00][addr]);
+}
+
+unsigned char mbc2::getBank(unsigned short addr)
+{
+	if (addr < 0x4000)
+		return 0;
+	return _romg;
 }
 
 mbc3::mbc3(unsigned romBanks, unsigned ramBanks, FILE *rom)
@@ -435,6 +459,11 @@ unsigned char	mbc3::readFrom(unsigned short addr)
 	return 0xFF;
 }
 
+unsigned char	mbc3::getBank(unsigned short addr)
+{
+	return _rombank;
+}
+
 mbc5::mbc5(unsigned romBanks, unsigned ramBanks, FILE *rom)
 {
 	PRINT_DEBUG("MBC5");
@@ -514,4 +543,9 @@ unsigned char	mbc5::readFrom(unsigned short addr)
 	else if (0xA000 <= addr && addr <= 0xBFFF)
 		return (_rambankRead(addr - 0xA000));
 	return 0xFF;
+}
+
+unsigned char	mbc5::getBank(unsigned short addr)
+{
+	return _bank1 | (_bank2 ? 0x0100 : 0x0000);
 }
