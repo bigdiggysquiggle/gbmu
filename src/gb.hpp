@@ -24,6 +24,7 @@ class gb {
 
 	protected:
 		unsigned long	_cycles;
+		unsigned		cyc;
 };
 
 #endif

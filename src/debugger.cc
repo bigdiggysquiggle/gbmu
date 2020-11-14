@@ -705,7 +705,12 @@ void	debuggerator::frame_advance()
 		cyc = _cpu->opcode_parse();
 //		PRINT_DEBUG("cyc = %u", cyc);
 //		_mmu->timerInc(cyc);
-		if (_cpu->_registers.pc > 0x100)
+		if (_cpu->imeCheck())
+		{
+			debug_msg();
+			cyc += _cpu->opcode_parse();
+		}
+		if (_cpu->_registers.pc > 0x100 || (_cpu->_registers.pc < 0x100 && (_mmu->PaccessAt(0xFF50) & 1)))
 			_cycles += cyc;
 		framecount += cyc;
 //		if (_cycles >= CPU_FREQ)

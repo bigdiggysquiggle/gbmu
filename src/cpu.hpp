@@ -66,9 +66,9 @@ class cpu {
 		unsigned char	interrupt_check(void);
 		void			reset();
 		void			setInterrupt(unsigned char);
-		unsigned char	opcode_parse(unsigned char);
 		unsigned char	opcode_parse(void);
 		unsigned long	cyc;
+		int				imeCheck();
 //		void		checkRom(void);
 
 	private:
@@ -77,6 +77,8 @@ class cpu {
 		struct registers		_registers;
 		unsigned char	_inCycles;
 		bool			_halt;
+		unsigned char	haltcheck;
+		unsigned char	ime_set;
 //		unsigned char	*_regtab(unsigned char);
 //		unsigned short	*_pairtabddss(unsigned char);
 //		unsigned short	*_pairtabqq(unsigned char);

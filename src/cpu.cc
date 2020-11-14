@@ -36,6 +36,18 @@ cpu::cpu(std::shared_ptr<mmu> unit, std::shared_ptr<ppu> pp) : _mmu(unit), _ppu(
 	_registers.pc = 0x00;
 	_registers.sp = 0x00;
 	_halt = false;
+	haltcheck = 1;
+}
+
+int	cpu::imeCheck()
+{
+	if (ime_set)
+	{
+		_ime = (ime_set % 2);
+		ime_set = 0;
+		return 1;
+	}
+	return 0;
 }
 
 unsigned char	nLogo[]={
@@ -84,7 +96,8 @@ unsigned char	cpu::interrupt_check(void)
 			if (_halt == true)
 			{
 				_halt = false;
-			   return opcode_parse(_ime ? 1 : 0);	
+				haltcheck = _ime ? 1 : 0;
+//			   return opcode_parse(_ime ? 1 : 0);	
 			}
 		}
 	}
@@ -543,7 +556,7 @@ void	cpu::stop(void)//check p1 bits and p1 line
 	while ((_mmu->accessAt(0xFF00) & 0xFF) == 0xFF)
 		continue;
 }
-
+/*
 unsigned char	cpu::di(void)
 {
 	cyc += opcode_parse();
@@ -556,6 +569,19 @@ unsigned char	cpu::ei(void)
 	cyc += opcode_parse();
 	this->_ime = 1;
 	return cyc;
+}
+*/
+
+unsigned char	cpu::di()
+{
+	ime_set = 2;
+	return 0;
+}
+
+unsigned char	cpu::ei()
+{
+	ime_set = 1;
+	return 0;
 }
 
 void	cpu::rlca(void)
@@ -954,12 +980,7 @@ void	cpu::reti(void)
 //	_mmu->writeTo(0xFFFF, 0x1F);
 }
 
-unsigned char	cpu::opcode_parse(void)
-{
-	return opcode_parse(1);
-}
-
-unsigned char	cpu::opcode_parse(unsigned char haltcheck)
+unsigned char	cpu::opcode_parse()
 {
 	_mmu->setINTS();
 	cyc = interrupt_check();
@@ -969,6 +990,8 @@ unsigned char	cpu::opcode_parse(unsigned char haltcheck)
 	unsigned char opcode = _mmu->accessAt(_registers.pc);
 	unsigned char ftab[4];
 	_registers.pc += haltcheck;
+	if (!haltcheck)
+		haltcheck = 1;
 	ftab[0] = _registers.f & bitflags::z ? 0 : 1;
 	ftab[1] = _registers.f & bitflags::z ? 1 : 0;
 	ftab[2] = _registers.f & bitflags::cy ? 0 : 1;

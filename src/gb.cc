@@ -12,6 +12,7 @@
 gb::gb()
 {
 	_cycles = 0;
+	cyc = 0;
 	_mmu = std::make_shared<mmu>(dmg);
 	_ppu = std::make_shared<ppu>(_mmu, dmg);
 	_cpu = std::make_unique<cpu>(_mmu, _ppu);
@@ -20,6 +21,7 @@ gb::gb()
 gb::gb(sys_type type)
 {
 	_cycles = 0;
+	cyc = 0;
 	_mmu = std::make_shared<mmu>(type);
 	_ppu = std::make_shared<ppu>(_mmu, type);
 	_cpu = std::make_unique<cpu>(_mmu, _ppu);
@@ -44,6 +46,8 @@ void	gb::frame_advance()
 		cyc = _cpu->opcode_parse();
 //		PRINT_DEBUG("cyc = %u", cyc);
 //		_mmu->timerInc(cyc);
+		if (_cpu->imeCheck())
+			cyc += _cpu->opcode_parse();
 		_cycles += cyc;
 		framecount += cyc;
 		if (_cycles >= CPU_FREQ)
