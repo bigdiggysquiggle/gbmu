@@ -26,10 +26,8 @@ int main(int ac, char **av)
 		printf("%s\n", e);
 		return (1);
 	}
-	printf("debug\n");
 #else
 	gb	_gb;
-	printf("fuck\n");
 #endif
 	try 
 	{

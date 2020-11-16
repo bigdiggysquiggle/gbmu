@@ -535,7 +535,6 @@ struct sub_flags {
 
 void	debuggerator::setData(int ac, char **av)
 {
-	printf("data get\n");
 	static const struct sub_flags data_tab[] = {
 		{"cpu", dataflags::cpu_instrs},
 		{"mode", dataflags::ppu_mode},
@@ -555,7 +554,6 @@ void	debuggerator::setData(int ac, char **av)
 
 void	debuggerator::setFormat(int ac, char **av)
 {
-	printf("format get\n");
 	static const struct sub_flags format_tab[] =
 	{
 		{"default", formatflags::default_output},
@@ -578,7 +576,6 @@ void	debuggerator::setFormat(int ac, char **av)
 
 void	debuggerator::setFile(int ac, char **av)
 {
-	printf("file get\n");
 	i++;
 	if (i != ac && av[i][0] != '-')
 		output_file = open(av[i], O_WRONLY | O_CREAT | O_TRUNC, 0644);
