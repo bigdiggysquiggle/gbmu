@@ -1,27 +1,5 @@
 #include "debugger.hpp"
 
-struct s_flags flag_tab[] = {
-	{"-o", flagset::output_file},
-	{"-f", flagset::output_format},
-	{"-d", flagset::output_data},
-	{0, 0}
-};
-
-struct s_flags data_flag_tab[] = {
-	{"cpu", dataflags::cpu_instrs},
-	{"mode", dataflags::ppu_mode},
-	{"state", dataflags::ppu_state},
-	{"vram", dataflags::ppu_vram},
-	{"mmu", dataflags::mmu_access},
-	{0, 0}
-};
-
-struct s_flags format_tab[] = {
-	{"default", formatflags::default_output},
-	{"binjgb", formatflags::binjgb},
-	{0, 0}
-};
-
 //if the instructions that use a register pair as the address
 //to write/read a value print the address in binjgb, set a
 //third argument value which is the regpair number shifted
@@ -544,74 +522,84 @@ struct s_debugmsg cbtab[] ={
 	{"set 7,a", 0}
 };
 
-debuggerator::debuggerator() : gb(dmg)
+int			debuggerator::output_file;
+unsigned	debuggerator::flags;
+unsigned	debuggerator::format_type;
+unsigned	debuggerator::output_data;
+unsigned	debuggerator::i; 
+
+struct sub_flags {
+	const char *f_string;
+	unsigned	f_val;
+};
+
+void	debuggerator::setData(int ac, char **av)
 {
-	flags = 0;
-	format_type = formatflags::default_output;
-	output_data = 0;
-	output_file = 0;
+	printf("data get\n");
+	static const struct sub_flags data_tab[] = {
+		{"cpu", dataflags::cpu_instrs},
+		{"mode", dataflags::ppu_mode},
+		{"state", dataflags::ppu_state},
+		{"vram", dataflags::ppu_vram},
+		{"mmu", dataflags::mmu_access},
+		{0, 0}
+	};
+	while (++i < ac && av[i][0] != '-')
+	{
+		for (int k = 0; data_tab[k].f_string; k++)
+			if (!strcmp(data_tab[k].f_string, av[i]))
+				output_data |= data_tab[k].f_val;
+	}
+	i--;
 }
 
-debuggerator::debuggerator(sys_type type) : gb(type)
+void	debuggerator::setFormat(int ac, char **av)
 {
-	flags = 0;
-	format_type = formatflags::default_output;
-	output_data = 0;
-	output_file = 0;
+	printf("format get\n");
+	static const struct sub_flags format_tab[] =
+	{
+		{"default", formatflags::default_output},
+		{"binjgb", formatflags::binjgb},
+		{0, 0}
+	};
+	i++;
+	if (i == ac)
+		throw "Error: missing output format";
+	else
+	{
+		for (int k = 0; format_tab[k].f_string; k++)
+			if (!strcmp(format_tab[k].f_string, av[i]))
+			{
+				format_type = format_tab[k].f_val;
+				break;
+			}
+	}
 }
 
-debuggerator::~debuggerator()
+void	debuggerator::setFile(int ac, char **av)
 {
-	if (output_file > 1)
-		close(output_file);
+	printf("file get\n");
+	i++;
+	if (i != ac && av[i][0] != '-')
+		output_file = open(av[i], O_WRONLY | O_CREAT | O_TRUNC, 0644);
 }
 
 void	debuggerator::setflags(int ac, char **av)
 {
-	for (int i = 0; i < ac; i++)
+	const char *flagstr = "-o -f -d";
+	static const struct s_flags flag_tab[] = {
+		{flagset::output_file, &setFile},
+		{flagset::output_format, &setFormat},
+		{flagset::output_data, &setData},
+	};
+	for (i = 0; i < ac; i++)
 	{
-		for (int j = 0; flag_tab[j].f_string; j++)
-		{
-			if (!strcmp(flag_tab[j].f_string, av[i]))
-			{
-				flags |= flag_tab[j].f_val;
-				switch(j)
-				{
-					case 0://file
-						i++;
-						if (i != ac)
-							output_file = open(av[i], O_WRONLY | O_CREAT | O_TRUNC, 0644);
-						break ;
-					case 1://format
-						i++;
-						if (i == ac)
-							throw "Error: missing output format";
-						else
-						{
-							for (int k = 0; format_tab[k].f_string; k++)
-							if (!strcmp(format_tab[k].f_string, av[i]))
-							{
-							format_type = format_tab[k].f_val;
-							break;
-							}
-						}
-						break;
-					case 2://data
-						while (++i < ac && av[i][0] != '-')
-						{
-							for (int k = 0; data_flag_tab[k].f_string; k++)
-							if (!strcmp(data_flag_tab[k].f_string, av[i]))
-							output_data |= data_flag_tab[k].f_val;
-						}
-						i--;
-						break;
-					case 3:
-						throw "Error: Invalid flags";
-						break;
-				}
-				break;
-			}
-		}
+		const char *spot = strstr(flagstr, av[i]);
+		unsigned x = (spot - flagstr) / 3;
+		if (spot == NULL || x >= (sizeof(flag_tab) / sizeof(struct s_flags)))
+			throw "Error: invalid flag";
+		flags |= flag_tab[x].f_val;
+		flag_tab[x].f_get(ac, av);
 	}
 	if (flags & flagset::output_file && !output_file)
 		output_file = open("debug_out.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644);

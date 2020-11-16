@@ -3,6 +3,7 @@
 #include "gb.hpp"
 #include <fcntl.h>
 #include <unistd.h>
+#include <cstring>
 
 //Exists as an extension of the gb class. Designed this way in
 //order to simplify hardware and memory access.
@@ -32,11 +33,6 @@ enum flagset {output_file = 1, output_format = 2, output_data = 4};
 enum dataflags {cpu_instrs = 1, ppu_mode = 2, ppu_state = 4, ppu_vram = 8, mmu_access = 16};
 enum formatflags {default_output, binjgb};
 
-struct s_flags {
-	const char *f_string;
-	unsigned f_val;
-};
-
 struct	s_debugmsg
 {
 	const char	*str;
@@ -45,19 +41,49 @@ struct	s_debugmsg
 
 class debuggerator : public gb {
 	public:
-		debuggerator();
-		~debuggerator();
-		debuggerator(sys_type type);
-		void	setflags(int ac, char **av);
+		debuggerator()
+		{
+			flags = 0;
+			format_type = formatflags::default_output;
+			output_data = 0;
+			output_file = 0;
+			i = 0;
+		}
+		debuggerator(sys_type type)
+		{
+			flags = 0;
+			format_type = formatflags::default_output;
+			output_data = 0;
+			output_file = 0;
+			i = 0;
+		}
+		~debuggerator()
+		{
+			if (output_file > 1)
+				close(output_file);
+		}
+		void	setflags(int, char **);
 		void	cpu_print();
 		void	debug_msg();
 		void	frame_advance();
 
 	private:
-		unsigned flags;
-		unsigned format_type;
-		unsigned output_data;
-		int output_file;
+		typedef void (*f_func)(int, char **);
+		struct s_flags {
+			unsigned f_val;
+			f_func	f_get;
+		};
+
+		static int		 output_file;
+		static unsigned flags;
+		static unsigned format_type;
+		static unsigned output_data;
+		static unsigned i;
+
+		static void	setFile(int ac, char **av);
+		static void	setFormat(int ac, char **av);
+		static void	setData(int ac, char **av);
+
 };
 
 #endif

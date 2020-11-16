@@ -21,7 +21,7 @@ L = -lSDL2
 all: $(NAME)
 
 debug: COMP += -DDEBUG_PRINT_ON
-debug: re
+debug: vre
 
 $(NAME):
 	$(COMP) $(SRCS) -o $(NAME) $(O) $(L)

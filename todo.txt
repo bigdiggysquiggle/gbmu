@@ -9,8 +9,6 @@ above seems doable by putting everything into a gameboy class
 
 have save states first export cpu variables, then append with all the ram info from the mmu
 
-fix sprite reading/printing. determine where the bug is and fix it
-
 verify whether or not mbc carts always have ram
 --halt_bug.gb
 
@@ -31,3 +29,7 @@ testrom
 define the byte order in which each 16 bit instruction
 performs its actions so that the emulator can run independent
 of the system's endianness.
+
+add interactive/step by step mode
+add breakpoints
+add mmu/vram viewing
