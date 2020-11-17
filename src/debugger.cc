@@ -522,7 +522,7 @@ struct s_debugmsg cbtab[] ={
 	{"set 7,a", 0}
 };
 
-int			debuggerator::output_file;
+int			debuggerator::out_file;
 unsigned	debuggerator::flags;
 unsigned	debuggerator::format_type;
 unsigned	debuggerator::output_data;
@@ -578,7 +578,7 @@ void	debuggerator::setFile(int ac, char **av)
 {
 	i++;
 	if (i != ac && av[i][0] != '-')
-		output_file = open(av[i], O_WRONLY | O_CREAT | O_TRUNC, 0644);
+		out_file = open(av[i], O_WRONLY | O_CREAT | O_TRUNC, 0644);
 }
 
 void	debuggerator::setflags(int ac, char **av)
@@ -598,10 +598,13 @@ void	debuggerator::setflags(int ac, char **av)
 		flags |= flag_tab[x].f_val;
 		flag_tab[x].f_get(ac, av);
 	}
-	if (flags & flagset::output_file && !output_file)
-		output_file = open("debug_out.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	if (flags & flagset::output_file)
+	{
+		if (!out_file)
+			out_file = open("debug_out.txt", O_WRONLY | O_CREAT | O_TRUNC, 0644);
+	}
 	else
-		output_file = 1;
+		out_file = 1;
 }
 
 void	debuggerator::cpu_print()
@@ -614,68 +617,70 @@ void	debuggerator::cpu_print()
 	if (format_type == (unsigned)formatflags::binjgb)
 	{
 		unsigned char _ppmode = _ppu->getMode();
-		dprintf(output_file, "A:%02hhX F:%C%C%C%C BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x (cy: %llu) ppu:%c%u ", _cpu->_registers.a, _cpu->_registers.f & 0x80 ? 'Z' : '-', _cpu->_registers.f & 0x40 ? 'N' : '-', _cpu->_registers.f & 0x20 ? 'H' : '-', _cpu->_registers.f & 0x10 ? 'C' : '-', _cpu->_registers.bc, _cpu->_registers.de, _cpu->_registers.hl, _cpu->_registers.sp, _cpu->_registers.pc, _cycles, _ppu->_off == false ? '+' : '-', _ppmode);
+		dprintf(out_file, "A:%02hhX F:%C%C%C%C BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x (cy: %llu) ppu:%c%u ", _cpu->_registers.a, _cpu->_registers.f & 0x80 ? 'Z' : '-', _cpu->_registers.f & 0x40 ? 'N' : '-', _cpu->_registers.f & 0x20 ? 'H' : '-', _cpu->_registers.f & 0x10 ? 'C' : '-', _cpu->_registers.bc, _cpu->_registers.de, _cpu->_registers.hl, _cpu->_registers.sp, _cpu->_registers.pc, _cycles, _ppu->_off == false ? '+' : '-', _ppmode);
 		if (_cpu->_registers.pc < 0x4000)
-			dprintf(output_file, "|[00]");
+			dprintf(out_file, "|[00]");
 		else if (_cpu->_registers.pc < 0x8000)
-			dprintf(output_file, "|[%02X]", _mmu->_cart->getBank(_cpu->_registers.pc));
+			dprintf(out_file, "|[%02X]", _mmu->_cart->getBank(_cpu->_registers.pc));
 		else
-			dprintf(output_file, "|[??]");
-		dprintf(output_file, "0x%04x", _cpu->_registers.pc);
-		dprintf(output_file, ": %02x", instr);
+			dprintf(out_file, "|[??]");
+		dprintf(out_file, "0x%04x", _cpu->_registers.pc);
+		dprintf(out_file, ": %02x", instr);
 		if (db.args == 1)
 		{
 			char s[16];
 			arg.n1 = _mmu->PaccessAt(_cpu->_registers.pc + 1);
-			dprintf(output_file, " %02x     ", arg.n1);
+			dprintf(out_file, " %02x     ", arg.n1);
 			sprintf(s, db.str, arg.n1);
-			dprintf(output_file, "%- 15s", s);
+			dprintf(out_file, "%- 15s", s);
 		}
 		else if (db.args == 2)
 		{
 			char s[16];
 			arg.n1 = _mmu->PaccessAt(_cpu->_registers.pc + 1);
 			arg.n2 = _mmu->PaccessAt(_cpu->_registers.pc + 2);
-			dprintf(output_file, " %02x %02x  ", arg.n1, arg.n2);
+			dprintf(out_file, " %02x %02x  ", arg.n1, arg.n2);
 			sprintf(s, db.str, arg.addr);
-			dprintf(output_file, "%- 15s", s);
+			dprintf(out_file, "%- 15s", s);
 		}
 		else
-			dprintf(output_file, "        %- 15s", db.str);
-		dprintf(output_file, "\n");
+			dprintf(out_file, "        %- 15s", db.str);
+		dprintf(out_file, "\n");
 	}
 	else
 	{
 		char s[40];
-		dprintf(output_file, "0x%02hhx ", instr);
+		dprintf(out_file, "0x%02hhx ", instr);
 		if (db.args == 1)
 		{
 			arg.n1 = _mmu->PaccessAt(_cpu->_registers.pc + 1);
 			sprintf(s, db.str, arg.n1);
-			dprintf(output_file, "%-14s\n", s);
+			dprintf(out_file, "%-14s\n", s);
 		}
 		else if (db.args == 2)
 		{
 			arg.n1 = _mmu->PaccessAt(_cpu->_registers.pc + 1);
 			arg.n2 = _mmu->PaccessAt(_cpu->_registers.pc + 2);
 			sprintf(s, db.str, arg.addr);
-			dprintf(output_file, "%-14s\n", s);
+			dprintf(out_file, "%-14s\n", s);
 		}
 		else
-			dprintf(output_file, "%-14s\n", db.str);
-		dprintf(output_file, " 0x%04hx\n", _cpu->_registers.pc);
-		dprintf(output_file, "\tregisters:\n\t");
-		dprintf(output_file, "AF 0x%04hx BC 0x%04hx\n",_cpu->_registers.af, _cpu->_registers.bc);
-		dprintf(output_file, "\tDE 0x%04hx HL 0x%04hx\n", _cpu->_registers.de, _cpu->_registers.hl);
-		dprintf(output_file, "\tSP 0x%04hx PC 0x%04hx\n", _cpu->_registers.sp, _cpu->_registers.pc);
-		dprintf(output_file, "\tLCDC 0x%02hhx STAT 0x%02hhx\n", _mmu->PaccessAt(0xFF40), _mmu->PaccessAt(0xFF41));
-		dprintf(output_file, "\tLYC  0x%02hhx LY   0x%02hhx\n", _mmu->PaccessAt(0xFF45), _mmu->PaccessAt(0xFF44));
-		dprintf(output_file, "\tIF 0x%02hhx IE 0x%02hhx IME %x\n\n\n", _mmu->PaccessAt(0xFF0F), _mmu->PaccessAt(0xFFFF), _cpu->_ime);
+			dprintf(out_file, "%-14s\n", db.str);
+		dprintf(out_file, " 0x%04hx\n", _cpu->_registers.pc);
+		dprintf(out_file, "\tregisters:\n\t");
+		dprintf(out_file, "AF 0x%04hx BC 0x%04hx\n",_cpu->_registers.af, _cpu->_registers.bc);
+		dprintf(out_file, "\tDE 0x%04hx HL 0x%04hx\n", _cpu->_registers.de, _cpu->_registers.hl);
+		dprintf(out_file, "\tSP 0x%04hx PC 0x%04hx\n", _cpu->_registers.sp, _cpu->_registers.pc);
+		dprintf(out_file, "\tLCDC 0x%02hhx STAT 0x%02hhx\n", _mmu->PaccessAt(0xFF40), _mmu->PaccessAt(0xFF41));
+		dprintf(out_file, "\tLYC  0x%02hhx LY   0x%02hhx\n", _mmu->PaccessAt(0xFF45), _mmu->PaccessAt(0xFF44));
+		dprintf(out_file, "\tIF 0x%02hhx IE 0x%02hhx IME %x\n\n\n", _mmu->PaccessAt(0xFF0F), _mmu->PaccessAt(0xFFFF), _cpu->_ime);
 	}
 }
 
 void	debuggerator::debug_msg()
 {
+	if (out_file == 1)
+		exit(0);
 	if (output_data & dataflags::cpu_instrs)
 		cpu_print();
 	if (output_data & dataflags::ppu_mode)

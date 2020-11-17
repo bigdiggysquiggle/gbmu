@@ -4,6 +4,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <cstring>
+#include <functional>
 
 //Exists as an extension of the gb class. Designed this way in
 //order to simplify hardware and memory access.
@@ -46,7 +47,7 @@ class debuggerator : public gb {
 			flags = 0;
 			format_type = formatflags::default_output;
 			output_data = 0;
-			output_file = 0;
+			out_file = 0;
 			i = 0;
 		}
 		debuggerator(sys_type type)
@@ -54,13 +55,13 @@ class debuggerator : public gb {
 			flags = 0;
 			format_type = formatflags::default_output;
 			output_data = 0;
-			output_file = 0;
+			out_file = 0;
 			i = 0;
 		}
 		~debuggerator()
 		{
-			if (output_file > 1)
-				close(output_file);
+			if (out_file > 1)
+				close(out_file);
 		}
 		void	setflags(int, char **);
 		void	cpu_print();
@@ -68,17 +69,17 @@ class debuggerator : public gb {
 		void	frame_advance();
 
 	private:
+		static int		out_file;
+		static unsigned flags;
+		static unsigned format_type;
+		static unsigned output_data;
+		static unsigned i;
+
 		typedef void (*f_func)(int, char **);
 		struct s_flags {
 			unsigned f_val;
 			f_func	f_get;
 		};
-
-		static int		 output_file;
-		static unsigned flags;
-		static unsigned format_type;
-		static unsigned output_data;
-		static unsigned i;
 
 		static void	setFile(int ac, char **av);
 		static void	setFormat(int ac, char **av);
