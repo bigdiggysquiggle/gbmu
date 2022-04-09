@@ -5,7 +5,7 @@
 //third argument value which is the regpair number shifted
 //over a certain number of bits
 struct s_debugmsg	msgtab[] = {
-	{"nop", 0},
+	{"nop", 0},			//0x00
 	{"ld bc,%hu", 2},
 	{"ld [bc],a", 0},
 	{"inc bc", 0},
@@ -21,7 +21,7 @@ struct s_debugmsg	msgtab[] = {
 	{"dec c", 0},
 	{"ld c,%hhu", 1},
 	{"rrca", 0},
-	{"stop", 0},
+	{"stop", 0},		//0x10
 	{"ld de,%hu", 2},
 	{"ld [de],a", 0},
 	{"inc de", 0},
@@ -37,7 +37,7 @@ struct s_debugmsg	msgtab[] = {
 	{"dec e", 0},
 	{"ld e,%hhu", 1},
 	{"rra", 0},
-	{"jr nz,%+hhd", 1},
+	{"jr nz,%+hhd", 1},	//0x20
 	{"ld hl,%hu", 2},
 	{"ld [hl+],a", 0},
 	{"inc hl", 0},
@@ -53,7 +53,7 @@ struct s_debugmsg	msgtab[] = {
 	{"dec l", 0},
 	{"ld l,%hhu", 1},
 	{"cpl", 0},
-	{"jr nc,%+hhd", 1},
+	{"jr nc,%+hhd", 1},	//0x30
 	{"ld sp,%hu", 2},
 	{"ld [hl-],a", 0},
 	{"inc sp", 0},
@@ -69,7 +69,7 @@ struct s_debugmsg	msgtab[] = {
 	{"dec a", 0},
 	{"ld a,%hhu", 1},
 	{"ccf", 0},
-	{"ld b,b", 0},
+	{"ld b,b", 0},		//0x40
 	{"ld b,c", 0},
 	{"ld b,d", 0},
 	{"ld b,e", 0},
@@ -85,7 +85,7 @@ struct s_debugmsg	msgtab[] = {
 	{"ld c,l", 0},
 	{"ld c,[hl]", 0},
 	{"ld c,a", 0},
-	{"ld d,b", 0},
+	{"ld d,b", 0},		//0x50
 	{"ld d,c", 0},
 	{"ld d,d", 0},
 	{"ld d,e", 0},
@@ -101,7 +101,7 @@ struct s_debugmsg	msgtab[] = {
 	{"ld e,l", 0},
 	{"ld e,[hl]", 0},
 	{"ld e,a", 0},
-	{"ld h,b", 0},
+	{"ld h,b", 0},		//0x60
 	{"ld h,c", 0},
 	{"ld h,d", 0},
 	{"ld h,e", 0},
@@ -117,7 +117,7 @@ struct s_debugmsg	msgtab[] = {
 	{"ld l,l", 0},
 	{"ld l,[hl]", 0},
 	{"ld l,a", 0},
-	{"ld [hl],b", 0},
+	{"ld [hl],b", 0},	//0x70
 	{"ld [hl],c", 0},
 	{"ld [hl],d", 0},
 	{"ld [hl],e", 0},
@@ -133,7 +133,7 @@ struct s_debugmsg	msgtab[] = {
 	{"ld a,l", 0},
 	{"ld a,[hl]", 0},
 	{"ld a,a", 0},
-	{"add a,b", 0},
+	{"add a,b", 0},		//0x80
 	{"add a,c", 0},
 	{"add a,d", 0},
 	{"add a,e", 0},
@@ -149,7 +149,7 @@ struct s_debugmsg	msgtab[] = {
 	{"adc a,l", 0},
 	{"adc a,[hl]", 0},
 	{"adc a,a", 0},
-	{"sub a,b", 0},
+	{"sub a,b", 0},		//0x90
 	{"sub a,c", 0},
 	{"sub a,d", 0},
 	{"sub a,e", 0},
@@ -165,7 +165,7 @@ struct s_debugmsg	msgtab[] = {
 	{"sbc a,l", 0},
 	{"sbc a,[hl]", 0},
 	{"sbc a,a", 0},
-	{"and a,b", 0},
+	{"and a,b", 0},		//0xa0
 	{"and a,c", 0},
 	{"and a,d", 0},
 	{"and a,e", 0},
@@ -181,7 +181,7 @@ struct s_debugmsg	msgtab[] = {
 	{"xor a,l", 0},
 	{"xor a,[hl]", 0},
 	{"xor a,a", 0},
-	{"or a,b", 0},
+	{"or a,b", 0},		//0xb0
 	{"or a,c", 0},
 	{"or a,d", 0},
 	{"or a,e", 0},
@@ -197,7 +197,7 @@ struct s_debugmsg	msgtab[] = {
 	{"cp a,l", 0},
 	{"cp a,[hl]", 0},
 	{"cp a,a", 0},
-	{"ret nz", 0},
+	{"ret nz", 0},		//0xc0
 	{"pop bc", 0},
 	{"jp nz,$%04hx", 2},
 	{"jp $%04hx", 2},
@@ -213,7 +213,7 @@ struct s_debugmsg	msgtab[] = {
 	{"call $%04x", 2},
 	{"adc a,%hhu", 1},
 	{"rst", 0},
-	{"ret nc", 0},
+	{"ret nc", 0},			//0xd0
 	{"pop de", 0},
 	{"jp nc,$%04hx", 2},
 	{0, 0},					//0xD3 no op
@@ -229,7 +229,7 @@ struct s_debugmsg	msgtab[] = {
 	{0, 0},					//0xDD no op
 	{0, 0},					//0xDE no op
 	{"rst", 0},
-	{"ldh [$ff%02x],a", 1},
+	{"ldh [$ff%02x],a", 1},	//0xe0
 	{"pop hl", 0},
 	{"ld [$ff+c],a", 0},
 	{0, 0},					//0xE3 no op
@@ -245,7 +245,7 @@ struct s_debugmsg	msgtab[] = {
 	{0, 0},					//0xED no op
 	{"xor %hhu", 1},
 	{"rst", 0},
-	{"ldh a,[$ff%02x]", 1},
+	{"ldh a,[$ff%02x]", 1},	//0xf0
 	{"pop af", 0},
 	{"ld a,[$ff+c]", 0},
 	{"di", 0},

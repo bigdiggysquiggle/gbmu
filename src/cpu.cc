@@ -1015,231 +1015,1246 @@ unsigned char	cpu::opcode_parse()
 		&_registers.de,
 		&_registers.hl,
 		&_registers.af};
-	if (opcode == 0xCB)
+	union address addr;
+	//I have given up and resigned myself to hand writing
+	//a colossal switch statement, as it's my understanding
+	//that the C++ compiler will optimize this into a
+	//proper jump table instead of making me have to
+	//figure out how to produce a working jump table of
+	//member functions complete with their associated
+	//arguments
+	char dis;
+	char val;
+	switch(opcode)
 	{
-		opcode = _mmu->accessAt(_registers.pc++);
-		switch(X(opcode))
-		{
-			case 0:
-				rot(Y(opcode), _regtab[Z(opcode)]);
-				break;
-			case 1:
-				bit(opcode);
-				break;
-			case 2:
-				res(opcode);
-				break;
-			case 3:
-				set(opcode);
-				break;
-			default:
-				exit(1);
-		}
-		_registers.f &= 0xF0;
-		return cyc;
-	}
-	if (!opcode)
-		return cyc;
-	if (opcode < 0x3F && ((opcode & 0x0F) == 0x06 || (opcode & 0x0F) == 0x0E))//LD r, n
-	{
-	    ld(_regtab[Y(opcode)], _mmu->accessAt(_registers.pc++));
-	    cycle();
-	}
-	else if (0x40 <= opcode && opcode <= 0x7F)//LD r, r 0x76 HALT
-	{
-		unsigned char *reg = _regtab[Z(opcode)];
-		if (!reg)
-		{
+		case 0x00:
+			return cyc;
+
+		case 0x01:	//ld bc,nn
+			addr.n1 = _mmu->accessAt(_registers.pc++);
+			addr.n2 = _mmu->accessAt(_registers.pc++);
+			ld(&_registers.bc, addr.addr);
+			break;
+
+		case 0x02:	//ld [bc], a
+			addr.addr = _registers.bc;
+			ld(addr, _registers.a);
+			break;
+
+		case 0x03:	//inc bc
+			inc(&_registers.bc);
+			break;
+
+		case 0x04:	//inc b
+			inc(&_registers.b);
+			break;
+
+		case 0x05:	//dec b
+			dec(&_registers.b);
+			break;
+
+		case 0x06:	//ld b,n
+			ld(&_registers.b, _mmu->accessAt(_registers.pc++));
 			cycle();
-		}
-		if (opcode == 0x76)
-			halt();
-		else
-		{
-			ld(_regtab[Y(opcode)], reg ? *reg : _mmu->accessAt(_registers.hl));
-		}
-	}
-	else if (opcode >= 0xE0 && ((opcode & 0x0F) == 0x0A || (opcode & 0x0F) == 0x02 || !(opcode & 0x0F)))//LD ff00 + c/n or nn to/from A
-	{
-		union address addr;
-		if ((opcode & 0x0F) == 0x0A)
-		{
+			break;
+
+		case 0x07:	//rlca
+			rlca();
+			break;
+
+		case 0x08:	//ld nn,sp
+			union address sp;
+			cycle();
 			addr.n1 = _mmu->accessAt(_registers.pc++);
 			cycle();
 			addr.n2 = _mmu->accessAt(_registers.pc++);
 			cycle();
-		}
-		else
-		{
-			if (opcode & 0x0F)
-				addr.addr = 0xFF00 + _registers.c;
-			else
-			{
-				addr.addr = 0xFF00 + _mmu->accessAt(_registers.pc++);
-				cycle();
-			}
-		}
-		if ((opcode & 0xF0) == 0xF0)
-		{
-			ld(&_registers.a, _mmu->accessAt(addr.addr));
+			sp.addr = _registers.sp;
+			ld(addr, sp);
+			break;
+
+		case 0x09:	//add hl,bc
+			add(&_registers.bc);
+			break;
+
+		case 0x0a:	//ld a,[bc]
+			ld(&_registers.a, _mmu->accessAt(_registers.bc));
+			break;
+
+		case 0x0b:	//dec bc
+			dec(&_registers.bc);
+			break;
+
+		case 0x0c:	//inc c
+			inc(&_registers.c);
+			break;
+
+		case 0x0d:	//dec c
+			dec(&_registers.c);
+			break;
+
+		case 0x0e:	//ld c,n
+			ld(&_registers.c, _mmu->accessAt(_registers.pc++));
 			cycle();
-		}
-		else
+			break;
+
+		case 0x0f:	//rrca
+			rrca();
+			break;
+
+		case 0x10:	//stop
+			stop();
+			break;
+
+		case 0x11:	//ld de, nn
+			cycle();
+			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
+			addr.n2 = _mmu->accessAt(_registers.pc++);
+			ld(&_registers.de, addr.addr);
+			break;
+
+		case 0x12:	//ld [de],a
+			addr.addr = _registers.de;
 			ld(addr, _registers.a);
-	}
-	else if (X(opcode) == 0 && Z(opcode) == 2)//LD reg pair into/out of a. dec/inc hl if needed
-	{
-		union address addr;
-		switch(P(opcode))
-		{
-			case 0:
-				addr.addr = _registers.bc;
-				break;
-			case 1:
-				addr.addr = _registers.de;
-				break;
-			case 2:
-				addr.addr = _registers.hl;
-				_registers.hl = _registers.hl + 1;
-				break;
-			case 3:
-				addr.addr = _registers.hl;
-				_registers.hl = _registers.hl - 1;
-				break;
-		}
-		if (Q(opcode))
+			break;
+
+		case 0x13:	//inc de
+			inc(&_registers.de);
+			break;
+
+		case 0x14:	//inc d
+			inc(&_registers.d);
+			break;
+
+		case 0x15:	//dec d
+			dec(&_registers.d);
+			break;
+
+		case 0x16:	//ld d,n
+			ld(&_registers.d, _mmu->accessAt(_registers.pc++));
+			cycle();
+			break;
+
+		case 0x17:	//rla
+			rla();
+			break;
+
+		case 0x18:	//jr d
+			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
+			jr(addr.n1);
+			break;
+
+		case 0x19:	//add hl, de
+			add(&_registers.de);
+			break;
+
+		case 0x1a:	//ld a, [de]
+			addr.addr = _registers.de;
 			ld(&_registers.a, addr.addr);
-		else
-			ld(addr, _registers.a);
-	}
-	else if (X(opcode) == 0 && Z(opcode) == 1)
-	{
-		if (!(Q(opcode)))//LD rr, nn
-		{
-			union address addr;
+			break;
+
+		case 0x1b:	//dec de
+			dec(&_registers.de);
+			break;
+
+		case 0x1c:	//inc e
+			inc(&_registers.e);
+			break;
+
+		case 0x1d:	//dec e
+			dec(&_registers.e);
+			break;
+
+		case 0x1e:	//ld e,n
+			ld(&_registers.e, _mmu->accessAt(_registers.pc++));
+			cycle();
+			break;
+
+		case 0x1f:	//rra
+			rra();
+			break;
+
+		case 0x20:	//jr nz, d
+			jr(_mmu->accessAt(_registers.pc++), FNZ);
+			break;
+
+		case 0x21:	//ld hl, nn
 			cycle();
 			addr.n1 = _mmu->accessAt(_registers.pc++);
 			cycle();
 			addr.n2 = _mmu->accessAt(_registers.pc++);
-			ld(_pairtabddss[P(opcode)], addr.addr);
-		}
-		else //ADD HL, rr
-			add(_pairtabddss[P(opcode)]);
-	}
-	else if (opcode == 0xF8)//LDHL SP, n
-	{
-		cycle();
-		char dis = _mmu->accessAt(_registers.pc++);
-		cycle();
-		ldhl(dis);
-	}
-	else if (opcode == 0xF9) //LD SP, HL
-	{
-		cycle();
-		ld(&_registers.sp, _registers.hl);
-	}
-   else if (opcode == 0x08)//LD (nn), SP
-   {
-	   union address addr;
-	   union address sp;
-		cycle();
-	   addr.n1 = _mmu->accessAt(_registers.pc++);
-		cycle();
-	   addr.n2 = _mmu->accessAt(_registers.pc++);
-		cycle();
-	   sp.addr = _registers.sp;
-	   ld(addr, sp);
-   }
-	else if (opcode > 0xC0 && (opcode & 0x0F) == 5)//PUSH
-		push(_pairtabqq[P(opcode)]);
-	else if (opcode > 0xC0 && (opcode & 0x0F) == 1)//POP
-		pop(_pairtabqq[P(opcode)]);
-	else if (0x80 <= opcode && opcode <= 0xBF)//ALU r
-	{
-		unsigned char *regp = _regtab[Z(opcode)];
-		unsigned char val = regp ? *regp : _mmu->accessAt(_registers.hl);
-		if (!regp)
+			ld(&_registers.hl, addr.addr);
+			break;
+
+		case 0x22:	//ld [hl+], a
+			addr.addr = _registers.hl;
+			_registers.hl += 1;
+			ld(addr, _registers.a);
+			break;
+
+		case 0x23:	//inc hl
+			inc(&_registers.hl);
+			break;
+
+		case 0x24:	//inc h
+			inc(&_registers.h);
+			break;
+
+		case 0x25:	//dec h
+			dec(&_registers.hl);
+			break;
+
+		case 0x26:	//ld h, n
+			ld(&_registers.h, _mmu->accessAt(_registers.pc++));
 			cycle();
-		alu(Y(opcode), val);
-	}
-	else if (X(opcode) == 3 && Z(opcode) == 6)//ALU n
-	{
-		alu(Y(opcode), _mmu->accessAt(_registers.pc++));
-		cycle();
-	}
-	else if (X(opcode) == 0 && 3 <= Z(opcode) && Z(opcode) <= 5)//INC/DEC rr/r
-		switch(Z(opcode))
-		{
-			case 3:
-				Q(opcode) ? dec(_pairtabddss[P(opcode)]) : inc(_pairtabddss[P(opcode)]);
-				break;
-			case 4:
-				inc(_regtab[Y(opcode)]);
-				break;
-			case 5:
-				dec(_regtab[Y(opcode)]);
-				break;
-		}
-	else if (opcode == 0xE8)//ADD SP
-	{
-		char val = _mmu->accessAt(_registers.pc++);	
-		cycle();
-		add(val);
-	}
-	else if (X(opcode) == 0 && Z(opcode) == 7)//RLCA RRCA RLA RRA DAA CPL SCF CCF on A
-		acctab(Y(opcode));
-	else if (opcode == 0x10)//STOP
-		stop();
-	else if (opcode == 0xF3)//DI
-		di();
-	else if (opcode == 0xFB)//EI
-		ei();
-	else if (X(opcode) == 0	&& Z(opcode) == 0 && Y(opcode) >=3)//JR d/JR cc, d
-	{
-		char val = _mmu->accessAt(_registers.pc++);
-		cycle();
-//		PRINT_DEBUG("jr: y %d ftab %hhd", Y(opcode), ftab[Y(opcode) - 4]);
-	//	sleep(1);
-		(Y(opcode) == 3) ? jr(val) : jr(val, ftab[Y(opcode) - 4]);
-	}
-	else if (opcode == 0xE9)//JP HL
-		jp(_registers.hl);
-	else if (X(opcode) == 3 && (Z(opcode) == 2 || Z(opcode) == 3))//JP nn/JP cc, nn 
-	{
-		union address addr;
-		cycle();
-		addr.n1 = _mmu->accessAt(_registers.pc++);
-		cycle();
-		addr.n2 = _mmu->accessAt(_registers.pc++);
-		if (Z(opcode) == 3)
-		{
+			break;
+
+		case 0x27:	//daa
+			daa();
+			break;
+
+		case 0x28:	//jr z, d
+			jr(_mmu->accessAt(_registers.pc++), FZ);
+			break;
+
+		case 0x29:	//add hl, hl
+			add(&_registers.hl);
+			break;
+
+		case 0x2a:	//ld a,[hl+]
+			addr.addr = _registers.hl;
+			_registers.hl += 1;
+			ld(&_registers.a, addr.addr);
+			break;
+
+		case 0x2b:	//dec hl
+			dec(&_registers.hl);
+			break;
+
+		case 0x2c:	//inc l
+			inc(&_registers.l);
+			break;
+
+		case 0x2d:	//dec l
+			dec(&_registers.l);
+			break;
+
+		case 0x2e:	//ld l, n
+			ld(&_registers.l, _mmu->accessAt(_registers.pc++));
+			cycle();
+			break;
+
+		case 0x2f:	//cpl
+			cpl();
+			break;
+
+		case 0x30:	//jr nc, d
+			jr(_mmu->accessAt(_registers.pc++), FNC);
+			break;
+
+		case 0x31:	//ld sp, nn
+			cycle();
+			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
+			addr.n2 = _mmu->accessAt(_registers.pc++);
+			ld(&_registers.sp, addr.addr);
+			break;
+
+		case 0x32:	//ld [hl-],a
+			addr.addr = _registers.hl;
+			_registers.hl -= 1;
+			ld(addr, _registers.a);
+			break;
+
+		case 0x33:	//inc sp
+			inc(&_registers.sp);
+			break;
+
+		case 0x34:	//inc [hl]
+			inc((unsigned char *)NULL);
+			//NULL is coded to handle the address at HL
+			break;
+
+		case 0x35:	//dec [hl]
+			dec((unsigned char *)NULL);
+			//NULL is coded to handle the address at HL
+			break;
+
+		case 0x36:	//ld [hl],n
+			ld((unsigned char *)NULL, _mmu->accessAt(_registers.pc++));
+			//NULL is coded to handle the address at HL
+			break;
+
+		case 0x37:	//scf
+			scf();
+			break;
+
+		case 0x38:	//jr c, d
+			jr(_mmu->accessAt(_registers.pc++), FC);
+			break;
+
+		case 0x39:	//add hl,sp
+			add(&_registers.sp);
+			break;
+
+		case 0x3a:	//ld a,[hl-]
+			addr.addr = _registers.hl;
+			_registers.hl -= 1;
+			ld(&_registers.a, addr.addr);
+			break;
+
+		case 0x3b:	//dec sp
+			dec(&_registers.sp);
+			break;
+
+		case 0x3c:	//inc a
+			inc(&_registers.a);
+			break;
+
+		case 0x3d:	//dec a
+			dec(&_registers.a);
+			break;
+
+		case 0x3e:	//ld a, n
+			ld(&_registers.a, _mmu->accessAt(_registers.pc++));
+			cycle();
+			break;
+
+		case 0x3f:	//ccf
+			ccf();
+			break;
+
+		case 0x40:	//ld b,b
+			ld(&_registers.b, _registers.b);
+			cycle();
+			break;
+
+		case 0x41:	//ld b,c
+			ld(&_registers.b, _registers.c);
+			cycle();
+			break;
+
+		case 0x42:	//ld b,d
+			ld(&_registers.b, _registers.d);
+			cycle();
+			break;
+
+		case 0x43:	//ld b,e
+			ld(&_registers.b, _registers.e);
+			cycle();
+			break;
+
+		case 0x44:	//ld b,h
+			ld(&_registers.b, _registers.h);
+			cycle();
+			break;
+
+		case 0x45:	//ld b,l
+			ld(&_registers.b, _registers.l);
+			cycle();
+			break;
+
+		case 0x46:	//ld b,[hl]
+			ld(&_registers.b, _registers.hl);
+			cycle();
+			break;
+
+		case 0x47:	//ld b,a
+			ld(&_registers.b, _registers.a);
+			cycle();
+			break;
+
+		case 0x48:	//ld c,b
+			ld(&_registers.c, _registers.b);
+			cycle();
+			break;
+
+		case 0x49:	//ld c,c
+			ld(&_registers.c, _registers.c);
+			cycle();
+			break;
+
+		case 0x4a:	//ld c,d
+			ld(&_registers.c, _registers.d);
+			cycle();
+			break;
+
+		case 0x4b:	//ld c,e
+			ld(&_registers.c, _registers.e);
+			cycle();
+			break;
+
+		case 0x4c:	//ld c,h
+			ld(&_registers.c, _registers.h);
+			cycle();
+			break;
+
+		case 0x4d:	//ld c,l
+			ld(&_registers.c, _registers.l);
+			cycle();
+			break;
+
+		case 0x4e:	//ld c,[hl]
+			ld(&_registers.c, _registers.hl);
+			cycle();
+			break;
+
+		case 0x4f:	//ld c,a
+			ld(&_registers.c, _registers.a);
+			cycle();
+			break;
+
+		case 0x50:
+			ld(&_registers.d, _registers.b);
+			cycle();
+			break;
+
+		case 0x51:
+			ld(&_registers.d, _registers.c);
+			cycle();
+			break;
+
+		case 0x52:
+			ld(&_registers.d, _registers.d);
+			cycle();
+			break;
+
+		case 0x53:
+			ld(&_registers.d, _registers.e);
+			cycle();
+			break;
+
+		case 0x54:
+			ld(&_registers.d, _registers.h);
+			cycle();
+			break;
+
+		case 0x55:
+			ld(&_registers.d, _registers.l);
+			cycle();
+			break;
+
+		case 0x56:
+			ld(&_registers.d, _registers.hl);
+			cycle();
+			break;
+
+		case 0x57:
+			ld(&_registers.d, _registers.a);
+			cycle();
+			break;
+
+		case 0x58:
+			ld(&_registers.e, _registers.b);
+			cycle();
+			break;
+
+		case 0x59:
+			ld(&_registers.e, _registers.c);
+			cycle();
+			break;
+
+		case 0x5a:
+			ld(&_registers.e, _registers.d);
+			cycle();
+			break;
+
+		case 0x5b:
+			ld(&_registers.e, _registers.e);
+			cycle();
+			break;
+
+		case 0x5c:
+			ld(&_registers.e, _registers.h);
+			cycle();
+			break;
+
+		case 0x5d:
+			ld(&_registers.e, _registers.l);
+			cycle();
+			break;
+
+		case 0x5e:
+			ld(&_registers.e, _registers.hl);
+			cycle();
+			break;
+
+		case 0x5f:
+			ld(&_registers.e, _registers.a);
+			cycle();
+			break;
+
+		case 0x60:
+			ld(&_registers.h, _registers.b);
+			cycle();
+			break;
+
+		case 0x61:
+			ld(&_registers.h, _registers.c);
+			cycle();
+			break;
+
+		case 0x62:
+			ld(&_registers.h, _registers.d);
+			cycle();
+			break;
+
+		case 0x63:
+			ld(&_registers.h, _registers.e);
+			cycle();
+			break;
+
+		case 0x64:
+			ld(&_registers.h, _registers.h);
+			cycle();
+			break;
+
+		case 0x65:
+			ld(&_registers.h, _registers.l);
+			cycle();
+			break;
+
+		case 0x66:
+			ld(&_registers.h, _registers.hl);
+			cycle();
+			break;
+
+		case 0x67:
+			ld(&_registers.h, _registers.a);
+			cycle();
+			break;
+
+		case 0x68:
+			ld(&_registers.l, _registers.b);
+			cycle();
+			break;
+
+		case 0x69:
+			ld(&_registers.l, _registers.c);
+			cycle();
+			break;
+
+		case 0x6a:
+			ld(&_registers.l, _registers.d);
+			cycle();
+			break;
+
+		case 0x6b:
+			ld(&_registers.l, _registers.e);
+			cycle();
+			break;
+
+		case 0x6c:
+			ld(&_registers.l, _registers.h);
+			cycle();
+			break;
+
+		case 0x6d:
+			ld(&_registers.l, _registers.l);
+			cycle();
+			break;
+
+		case 0x6e:
+			ld(&_registers.l, _registers.hl);
+			cycle();
+			break;
+
+		case 0x6f:
+			ld(&_registers.l, _registers.a);
+			cycle();
+			break;
+
+//NULL handles the address at HL
+		case 0x70:
+			ld((unsigned char *)NULL, _registers.b);
+			cycle();
+			break;
+
+		case 0x71:
+			ld((unsigned char *)NULL, _registers.c);
+			cycle();
+			break;
+
+		case 0x72:
+			ld((unsigned char *)NULL, _registers.d);
+			cycle();
+			break;
+
+		case 0x73:
+			ld((unsigned char *)NULL, _registers.e);
+			cycle();
+			break;
+
+		case 0x74:
+			ld((unsigned char *)NULL, _registers.h);
+			cycle();
+			break;
+
+		case 0x75:
+			ld((unsigned char *)NULL, _registers.l);
+			cycle();
+			break;
+
+		case 0x76:
+			halt();
+			break;
+
+		case 0x77:
+			ld((unsigned char *)NULL, _registers.a);
+			cycle();
+			break;
+
+		case 0x78:
+			ld(&_registers.a, _registers.b);
+			cycle();
+			break;
+
+		case 0x79:
+			ld(&_registers.a, _registers.c);
+			cycle();
+			break;
+
+		case 0x7a:
+			ld(&_registers.a, _registers.d);
+			cycle();
+			break;
+
+		case 0x7b:
+			ld(&_registers.a, _registers.e);
+			cycle();
+			break;
+
+		case 0x7c:
+			ld(&_registers.a, _registers.h);
+			cycle();
+			break;
+
+		case 0x7d:
+			ld(&_registers.a, _registers.l);
+			cycle();
+			break;
+
+		case 0x7e:
+			ld(&_registers.a, _registers.hl);
+			//NULL handles the address at HL
+			cycle();
+			break;
+
+		case 0x7f:
+			ld(&_registers.a, _registers.a);
+			cycle();
+			break;
+
+//ADD
+		case 0x80:
+			add(_registers.b);
+			break;
+
+		case 0x81:
+			add(_registers.c);
+			break;
+
+		case 0x82:
+			add(_registers.d);
+			break;
+
+		case 0x83:
+			add(_registers.e);
+			break;
+
+		case 0x84:
+			add(_registers.h);
+			break;
+
+		case 0x85:
+			add(_registers.l);
+			break;
+
+		case 0x86:
+			add(_mmu->accessAt(_registers.hl));
+			break;
+
+		case 0x87:
+			add(_registers.a);
+			break;
+
+//ADC
+		case 0x88:
+			adc(_registers.b);
+			break;
+
+		case 0x89:
+			adc(_registers.c);
+			break;
+
+		case 0x8a:
+			adc(_registers.d);
+			break;
+
+		case 0x8b:
+			adc(_registers.e);
+			break;
+
+		case 0x8c:
+			adc(_registers.h);
+			break;
+
+		case 0x8d:
+			adc(_registers.l);
+			break;
+
+		case 0x8e:
+			adc(_mmu->accessAt(_registers.hl));
+			break;
+
+		case 0x8f:
+			adc(_registers.a);
+			break;
+
+//SUB
+		case 0x90:
+			sub(_registers.b);
+			break;
+
+		case 0x91:
+			sub(_registers.c);
+			break;
+
+		case 0x92:
+			sub(_registers.d);
+			break;
+
+		case 0x93:
+			sub(_registers.e);
+			break;
+
+		case 0x94:
+			sub(_registers.h);
+			break;
+
+		case 0x95:
+			sub(_registers.l);
+			break;
+
+		case 0x96:
+			sub(_mmu->accessAt(_registers.hl));
+			break;
+
+		case 0x97:
+			sub(_registers.a);
+			break;
+
+//SBC
+		case 0x98:
+			sbc(_registers.b);
+			break;
+
+		case 0x99:
+			sbc(_registers.c);
+			break;
+
+		case 0x9a:
+			sbc(_registers.d);
+			break;
+
+		case 0x9b:
+			sbc(_registers.e);
+			break;
+
+		case 0x9c:
+			sbc(_registers.h);
+			break;
+
+		case 0x9d:
+			sbc(_registers.l);
+			break;
+
+		case 0x9e:
+			sbc(_mmu->accessAt(_registers.hl));
+			break;
+
+		case 0x9f:
+			sbc(_registers.a);
+			break;
+
+//AND
+		case 0xa0:
+			_and(_registers.b);
+			break;
+
+		case 0xa1:
+			_and(_registers.c);
+			break;
+
+		case 0xa2:
+			_and(_registers.d);
+			break;
+
+		case 0xa3:
+			_and(_registers.e);
+			break;
+
+		case 0xa4:
+			_and(_registers.h);
+			break;
+
+		case 0xa5:
+			_and(_registers.l);
+			break;
+
+		case 0xa6:
+			_and(_mmu->accessAt(_registers.hl));
+			break;
+
+		case 0xa7:
+			_and(_registers.a);
+			break;
+
+//XOR
+		case 0xa8:
+			_xor(_registers.b);
+			break;
+
+		case 0xa9:
+			_xor(_registers.c);
+			break;
+
+		case 0xaa:
+			_xor(_registers.d);
+			break;
+
+		case 0xab:
+			_xor(_registers.e);
+			break;
+
+		case 0xac:
+			_xor(_registers.h);
+			break;
+
+		case 0xad:
+			_xor(_registers.l);
+			break;
+
+		case 0xae:
+			_xor(_mmu->accessAt(_registers.hl));
+			break;
+
+		case 0xaf:
+			_xor(_registers.a);
+			break;
+
+//OR
+		case 0xb0:
+			_or(_registers.b);
+			break;
+
+		case 0xb1:
+			_or(_registers.c);
+			break;
+
+		case 0xb2:
+			_or(_registers.d);
+			break;
+
+		case 0xb3:
+			_or(_registers.e);
+			break;
+
+		case 0xb4:
+			_or(_registers.h);
+			break;
+
+		case 0xb5:
+			_or(_registers.l);
+			break;
+
+		case 0xb6:
+			_or(_mmu->accessAt(_registers.hl));
+			break;
+
+		case 0xb7:
+			_or(_registers.a);
+			break;
+
+//CP
+		case 0xb8:
+			cp(_registers.b);
+			break;
+
+		case 0xb9:
+			cp(_registers.c);
+			break;
+
+		case 0xba:
+			cp(_registers.d);
+			break;
+
+		case 0xbb:
+			cp(_registers.e);
+			break;
+
+		case 0xbc:
+			cp(_registers.h);
+			break;
+
+		case 0xbd:
+			cp(_registers.l);
+			break;
+
+		case 0xbe:
+			cp(_mmu->accessAt(_registers.hl));
+			break;
+
+		case 0xbf:
+			cp(_registers.a);
+			break;
+
+		case 0xc0:	//ret nz
+			ret(FNZ);
+			break;
+
+		case 0xc1:	//pop bc
+			pop(&_registers.bc);
+			break;
+
+		case 0xc2:	//jp nz, nn
+			cycle();
+			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
+			addr.n2 = _mmu->accessAt(_registers.pc++);
+			jp(addr.addr, FNZ);
+			break;
+
+		case 0xc3:	//jp nn
+			cycle();
+			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
+			addr.n2 = _mmu->accessAt(_registers.pc++);
 			cycle();
 			jp(addr.addr);
-		}
-		else
-			jp(addr.addr, ftab[Y(opcode)]);
-	}
-	else if (X(opcode) == 3 && (Z(opcode) == 4 || Z(opcode) == 5))//CALL nn/CALL cc, nn
-	{
-		union address addr;
-		addr.n1 = _mmu->accessAt(_registers.pc++);
-		cycle();
-		addr.n2 = _mmu->accessAt(_registers.pc++);
-		cycle();
-		Z(opcode) == 5 ? call(addr.addr) : call(addr.addr, ftab[Y(opcode)]);
-	}
-	else if (X(opcode) == 3 && Z(opcode) == 7)//RST
-		rst(Y(opcode) * 8);
-	else if (X(opcode) == 3 && !Z(opcode))//RET cc
-		ret(ftab[Y(opcode)]);
-	else if (opcode == 0xC9)//RET
-		ret();
-	else if (opcode == 0xD9)//RETI
-		reti();
-	else
-	{
-		std::cerr << "Unhandled opcode: 0x" << std::hex << +opcode << std::endl;
-		exit(1);
+			break;
+
+		case 0xc4:	//call nz, nn
+			cycle();
+			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
+			addr.n2 = _mmu->accessAt(_registers.pc++);
+			call(addr.addr, FNZ);
+			break;
+
+		case 0xc5:	//push bc
+			push(&_registers.bc);
+			break;
+
+		case 0xc6:	//add a, n
+			add(_mmu->accessAt(_registers.pc++));
+			cycle();
+			break;
+
+		case 0xc7:	//rst 0x00
+			rst(0x00);
+			break;
+
+		case 0xc8:	//ret z
+			ret(FZ);
+			break;
+
+		case 0xc9:	//ret
+			ret();
+			break;
+
+		case 0xca:	//jp z, nn
+			cycle();
+			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
+			addr.n2 = _mmu->accessAt(_registers.pc++);
+			jp(addr.addr, FZ);
+			break;
+
+		case 0xcb:	//CB table
+			opcode = _mmu->accessAt(_registers.pc++);
+			switch(X(opcode))
+			{
+				case 0:
+					rot(Y(opcode), _regtab[Z(opcode)]);
+					break;
+				case 1:
+					bit(opcode);
+					break;
+				case 2:
+					res(opcode);
+					break;
+				case 3:
+					set(opcode);
+					break;
+				default:
+					exit(1);
+			}
+			_registers.f &= 0xF0;
+			return cyc;
+
+		case 0xcc:	//call z, nn
+			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
+			addr.n2 = _mmu->accessAt(_registers.pc++);
+			cycle();
+			call(addr.addr, FZ);
+			break;
+
+		case 0xcd:	//call nn
+			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
+			addr.n2 = _mmu->accessAt(_registers.pc++);
+			cycle();
+			call(addr.addr);
+			break;
+
+		case 0xce:	//adc a, n
+			adc(_mmu->accessAt(_registers.pc++));
+			cycle();
+			break;
+
+		case 0xcf:	//rst
+			rst(0x08);
+			break;
+
+		case 0xd0:	//ret nc
+			ret(FNC);
+			break;
+
+		case 0xd1:	//pop de
+			pop(&_registers.de);
+			break;
+
+		case 0xd2:	//jp nc
+			cycle();
+			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
+			addr.n2 = _mmu->accessAt(_registers.pc++);
+			jp(addr.addr, FNC);
+			break;
+
+		case 0xd3:	//nop
+			return cyc;
+
+		case 0xd4:	//call nc, nn
+			cycle();
+			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
+			addr.n2 = _mmu->accessAt(_registers.pc++);
+			call(addr.addr, FNC);
+			break;
+
+		case 0xd5:	//push de
+			push(&_registers.de);
+			break;
+
+		case 0xd6:	//sub a, n
+			sub(_mmu->accessAt(_registers.pc++));
+			cycle();
+			break;
+
+		case 0xd7:	//rst
+			rst(0x10);
+			break;
+
+		case 0xd8:	//ret c
+			ret(FC);
+			break;
+
+		case 0xd9:	//reti
+			reti();
+			break;
+
+		case 0xda:	//jp c, nn
+			cycle();
+			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
+			addr.n2 = _mmu->accessAt(_registers.pc++);
+			jp(addr.addr, FC);
+			break;
+
+		case 0xdb:	//nop
+			return cyc;
+
+		case 0xdc:	//call c, nn
+			cycle();
+			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
+			addr.n2 = _mmu->accessAt(_registers.pc++);
+			call(addr.addr, FC);
+			break;
+
+		case 0xdd:	//nop
+			return cyc;
+
+		case 0xde:	//nop
+			return cyc;
+
+		case 0xdf:	//rst
+			rst(0x18);
+			break;
+
+		case 0xe0:	//ldh [ff+n], a
+			addr.addr = 0xFF00 + _mmu->accessAt(_registers.pc++);
+			cycle();
+			ld(addr, _registers.a);
+			break;
+
+		case 0xe1:	//pop hl
+			pop(&_registers.hl);
+			break;
+
+		case 0xe2:	//ld [ff+c], a
+			addr.addr = 0xFF00 + _registers.c;
+			ld(addr, _registers.a);
+			break;
+
+		case 0xe3:	//nop
+			return cyc;
+			break;
+
+		case 0xe4:	//nop
+			return cyc;
+			break;
+
+		case 0xe5:	//push hl
+			push(&_registers.hl);
+			break;
+
+		case 0xe6:	//and n
+			_and(_mmu->accessAt(_registers.pc++));
+			cycle();
+			break;
+
+		case 0xe7:	//rst
+			rst(0x20);
+			break;
+
+		case 0xe8:	//add sp, n (signed)
+			val = _mmu->accessAt(_registers.pc++);
+			cycle();
+			add(val);
+			break;
+
+		case 0xe9:	//jp [hl]
+			jp(_registers.hl);
+			break;
+
+		case 0xea:	//ld [nn], a
+			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
+			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
+			ld(addr, _registers.a);
+			cycle();
+			break;
+
+		case 0xeb:	//nop
+			return cyc;
+			break;
+
+		case 0xec:	//nop
+			return cyc;
+			break;
+
+		case 0xed:	//nop
+			return cyc;
+			break;
+
+		case 0xee:	//xor n
+			_xor(_mmu->accessAt(_registers.pc++));
+			cycle();
+			break;
+
+		case 0xef:	//rst
+			rst(0x28);
+			break;
+
+		case 0xf0:	//ldh a,[ff+n]
+			addr.addr = 0xFF00 + _mmu->accessAt(_registers.pc++);
+			cycle();
+			ld(&_registers.a, _mmu->accessAt(addr.addr));
+			cycle();
+			break;
+
+		case 0xf1:	//pop af
+			pop(&_registers.af);
+			break;
+
+		case 0xf2:	//ld a,[ff+c]
+			addr.addr = 0xFF00 + _registers.c;
+			ld(&_registers.a, _mmu->accessAt(addr.addr));
+			cycle();
+			break;
+
+		case 0xf3:	//di
+			di();
+			break;
+
+		case 0xf4:	//nop
+			return cyc;
+			break;
+
+		case 0xf5:	//push af
+			push(&_registers.af);
+			break;
+
+		case 0xf6:	//or n
+			_or(_mmu->accessAt(_registers.pc++));
+			cycle();
+			break;
+
+		case 0xf7:	//rst
+			rst(0x30);
+			break;
+
+		case 0xf8:	//ldhl sp,n (signed)
+			cycle();
+			dis = _mmu->accessAt(_registers.pc++);
+			cycle();
+			ldhl(dis);
+			break;
+
+		case 0xf9:	//ld sp, hl
+			cycle();
+			ld(&_registers.sp, _registers.hl);
+			break;
+
+		case 0xfa:	//ld a, [nn]
+			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
+			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
+			ld(&_registers.a, addr.addr);
+			cycle();
+			break;
+/////go back and verify ld cycles the ppu properly
+		case 0xfb:	//ei
+			ei();
+			break;
+
+		case 0xfc:	//nop
+			return cyc;
+
+		case 0xfd:	//nop
+			return cyc;
+
+		case 0xfe:	//cp a,n
+			_or(_mmu->accessAt(_registers.pc++));
+			cycle();
+			break;
+
+		case 0xff:	//rst
+			rst(0x38);
+			break;
+
+		default:
+			std::cerr << "Unhandled opcode: 0x" << std::hex << +opcode << std::endl;
+			exit(1);
+
 	}
 	_registers.f &= 0xF0;
 	return cyc;
