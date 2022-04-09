@@ -1,8 +1,4 @@
-create op, arg1, arg2 as a means to efficiently speed up the
-debug message printing alongside the cpu execution
-
-create giant switch statement as it's the easiest way to
-create a jump table for my purposes in c++
+reimplement stop command
 
 ideally find a way to map several arrays into one super array
 --seems entirely possible, tough part is managing IO masks
