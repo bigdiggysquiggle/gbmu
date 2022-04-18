@@ -475,11 +475,7 @@ void	mmu::writeTo(unsigned short addr, unsigned char msg)
 	else if (0xC000 <= addr && addr <= 0xCFFF)
 		_wram0[addr - 0xC000] = msg;
 	else if (0xD000 <= addr && addr <= 0xDFFF)
-	{
-//		if (addr == 0xd804)
-//			PRINT_DEBUG("writing d804 0x%02hhx", msg);
 		_wram1[_IOReg[0x70] & _cgb_mode][addr - 0xD000] = msg;
-	}
 	else if (0xE000 <= addr && addr <= 0xFDFF)
 		writeTo(addr - 0x2000, msg);
 	else if (0xFE00 <= addr && addr <= 0xFE9F)//check ppu mode
