@@ -264,7 +264,7 @@ struct s_debugmsg	msgtab[] = {
 };
 
 struct s_debugmsg cbtab[] ={
-	{"rlc b", 0},
+	{"rlc b", 0},       //0x00
 	{"rlc c", 0},
 	{"rlc d", 0},
 	{"rlc e", 0},
@@ -280,7 +280,7 @@ struct s_debugmsg cbtab[] ={
 	{"rrc l", 0},
 	{"rrc [hl]", 0},
 	{"rrc a", 0},
-	{"rl b", 0},
+	{"rl b", 0},        //0x10
 	{"rl c", 0},
 	{"rl d", 0},
 	{"rl e", 0},
@@ -296,7 +296,7 @@ struct s_debugmsg cbtab[] ={
 	{"rr l", 0},
 	{"rr [hl]", 0},
 	{"rr a", 0},
-	{"sla b", 0},
+	{"sla b", 0},       //0x20
 	{"sla c", 0},
 	{"sla d", 0},
 	{"sla e", 0},
@@ -312,7 +312,7 @@ struct s_debugmsg cbtab[] ={
 	{"sra l", 0},
 	{"sra [hl]", 0},
 	{"sra a", 0},
-	{"swap b", 0},
+	{"swap b", 0},      //0x30
 	{"swap c", 0},
 	{"swap d", 0},
 	{"swap e", 0},
@@ -328,7 +328,7 @@ struct s_debugmsg cbtab[] ={
 	{"srl l", 0},
 	{"srl [hl]", 0},
 	{"srl a", 0},
-	{"bit 0,b", 0},
+	{"bit 0,b", 0},     //0x40
 	{"bit 0,c", 0},
 	{"bit 0,d", 0},
 	{"bit 0,e", 0},
@@ -344,7 +344,7 @@ struct s_debugmsg cbtab[] ={
 	{"bit 1,l", 0},
 	{"bit 1,[hl]", 0},
 	{"bit 1,a", 0},
-	{"bit 2,b", 0},
+	{"bit 2,b", 0},     //0x50
 	{"bit 2,c", 0},
 	{"bit 2,d", 0},
 	{"bit 2,e", 0},
@@ -360,7 +360,7 @@ struct s_debugmsg cbtab[] ={
 	{"bit 3,l", 0},
 	{"bit 3,[hl]", 0},
 	{"bit 3,a", 0},
-	{"bit 4,b", 0},
+	{"bit 4,b", 0},     //0x60
 	{"bit 4,c", 0},
 	{"bit 4,d", 0},
 	{"bit 4,e", 0},
@@ -376,7 +376,7 @@ struct s_debugmsg cbtab[] ={
 	{"bit 5,l", 0},
 	{"bit 5,[hl]", 0},
 	{"bit 5,a", 0},
-	{"bit 6,b", 0},
+	{"bit 6,b", 0},     //0x70
 	{"bit 6,c", 0},
 	{"bit 6,d", 0},
 	{"bit 6,e", 0},
@@ -392,7 +392,7 @@ struct s_debugmsg cbtab[] ={
 	{"bit 7,l", 0},
 	{"bit 7,[hl]", 0},
 	{"bit 7,a", 0},
-	{"res 0,b", 0},
+	{"res 0,b", 0},     //0x80
 	{"res 0,c", 0},
 	{"res 0,d", 0},
 	{"res 0,e", 0},
@@ -408,7 +408,7 @@ struct s_debugmsg cbtab[] ={
 	{"res 1,l", 0},
 	{"res 1,[hl]", 0},
 	{"res 1,a", 0},
-	{"res 2,b", 0},
+	{"res 2,b", 0},     //0x90
 	{"res 2,c", 0},
 	{"res 2,d", 0},
 	{"res 2,e", 0},
@@ -424,7 +424,7 @@ struct s_debugmsg cbtab[] ={
 	{"res 3,l", 0},
 	{"res 3,[hl]", 0},
 	{"res 3,a", 0},
-	{"res 4,b", 0},
+	{"res 4,b", 0},     //0xA0
 	{"res 4,c", 0},
 	{"res 4,d", 0},
 	{"res 4,e", 0},
@@ -440,7 +440,7 @@ struct s_debugmsg cbtab[] ={
 	{"res 5,l", 0},
 	{"res 5,[hl]", 0},
 	{"res 5,a", 0},
-	{"res 6,b", 0},
+	{"res 6,b", 0},     //0xB0
 	{"res 6,c", 0},
 	{"res 6,d", 0},
 	{"res 6,e", 0},
@@ -456,7 +456,7 @@ struct s_debugmsg cbtab[] ={
 	{"res 7,l", 0},
 	{"res 7,[hl]", 0},
 	{"res 7,a", 0},
-	{"set 0,b", 0},
+	{"set 0,b", 0},     //0xC0
 	{"set 0,c", 0},
 	{"set 0,d", 0},
 	{"set 0,e", 0},
@@ -472,7 +472,7 @@ struct s_debugmsg cbtab[] ={
 	{"set 1,l", 0},
 	{"set 1,[hl]", 0},
 	{"set 1,a", 0},
-	{"set 2,b", 0},
+	{"set 2,b", 0},     //0xD0
 	{"set 2,c", 0},
 	{"set 2,d", 0},
 	{"set 2,e", 0},
@@ -488,7 +488,7 @@ struct s_debugmsg cbtab[] ={
 	{"set 3,l", 0},
 	{"set 3,[hl]", 0},
 	{"set 3,a", 0},
-	{"set 4,b", 0},
+	{"set 4,b", 0},     //0xE0
 	{"set 4,c", 0},
 	{"set 4,d", 0},
 	{"set 4,e", 0},
@@ -504,7 +504,7 @@ struct s_debugmsg cbtab[] ={
 	{"set 5,l", 0},
 	{"set 5,[hl]", 0},
 	{"set 5,a", 0},
-	{"set 6,b", 0},
+	{"set 6,b", 0},     //0xF0
 	{"set 6,c", 0},
 	{"set 6,d", 0},
 	{"set 6,e", 0},
@@ -609,10 +609,10 @@ void	debuggerator::setflags(int ac, char **av)
 
 void	debuggerator::cpu_print()
 {
-	if (_cpu->_registers.pc < 0x100)
-		return ;
+//	if (_cpu->_registers.pc < 0x100)
+//		return ;
 	unsigned char instr = _mmu->PaccessAt(_cpu->_registers.pc);
-	struct s_debugmsg db = (instr == 0xCB) ? cbtab[instr] : msgtab[instr];
+	struct s_debugmsg db = (instr == 0xCB) ? cbtab[_mmu->PaccessAt(_cpu->_registers.pc+1)] : msgtab[instr];
 	union address arg;
 	if (format_type == (unsigned)formatflags::binjgb)
 	{

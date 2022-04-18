@@ -18,8 +18,6 @@
 //every 4 cycles so that the PPU can handle graphics in parallel with the CPU
 //as happens on real hardware
 
-void	debug_print(unsigned char op, unsigned char cb, struct registers reg, unsigned char lcdc, unsigned char stat, unsigned char ly, unsigned char lyc, unsigned char IF, unsigned char IE, unsigned char IME);
-
 cpu::cpu(std::shared_ptr<mmu> unit, std::shared_ptr<ppu> pp) : _mmu(unit), _ppu(pp)
 {
 	//have gb run cart verification before this
@@ -999,6 +997,7 @@ unsigned char	cpu::opcode_parse()
 		&_registers.l,
 		0,
 		&_registers.a };
+
 	//I have given up and resigned myself to hand writing
 	//a colossal switch statement, as it's my understanding
 	//that the C++ compiler will optimize this into a
@@ -1011,7 +1010,7 @@ unsigned char	cpu::opcode_parse()
 	char val;
 	switch(opcode)
 	{
-		case 0x00:
+		case 0x00: //NOP
 			return cyc;
 			break;
 
@@ -1048,14 +1047,12 @@ unsigned char	cpu::opcode_parse()
 			break;
 
 		case 0x08:	//ld nn,sp
-			union address sp;
 			cycle();
 			addr.n1 = _mmu->accessAt(_registers.pc++);
 			cycle();
 			addr.n2 = _mmu->accessAt(_registers.pc++);
 			cycle();
-			sp.addr = _registers.sp;
-			ld(addr, sp);
+			ld(addr, _registers.sp);
 			break;
 
 		case 0x09:	//add hl,bc
