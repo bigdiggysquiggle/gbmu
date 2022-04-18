@@ -325,13 +325,20 @@ void	mmu::setINTS(void)
 //mode the CPU can't access Palette RAM (FF69h and FF6Bh) during mode 3
 
 //this function allows the PPU to access all regions of memory. Only to be used
-//in the PPU source code.
+//in the PPU source code. Written as a nearly identical version of accessAt to
+//save on cpu instructions related to checking if we're accessing from the ppu
+//or not
 unsigned char	mmu::PaccessAt(unsigned short addr)
 {
 //	PRINT_DEBUG("PAccessing 0x%04x", addr);
 	unsigned char	val;
 	if (addr <= 0x7FFF || (0xA000 <= addr && addr <= 0xBFFF))
-		val = _cart->readFrom(addr);
+    {
+        if ((addr < 0x100) && ! (_IOReg[0x50] & 0x01))
+            val = _booter[addr];
+        else
+	    	val = _cart->readFrom(addr);
+    }
 	if (0xE000 <= addr && addr <= 0xFDFF)
 		val = 0xFF;
 	else if (0x8000 <= addr && addr <= 0x9FFF)
@@ -345,7 +352,7 @@ unsigned char	mmu::PaccessAt(unsigned short addr)
 	else if (0xFE00 <= addr && addr <= 0xFE9F)
 		val = _oam[addr - 0xFE00];
 	else if (0xFEA0 <= addr && addr <= 0xFEFF)//unused
-		val = 0x00; //changes for cgb
+		val = 0xFF; //changes for cgb
 	else if (0xFF00 <= addr && addr <= 0xFF7F)
 		val = _IOReg[addr - 0xFF00];
 	else if (0xFF80 <= addr && addr <= 0xFFFE)
