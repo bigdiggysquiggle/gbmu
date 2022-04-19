@@ -68,8 +68,9 @@ class laz_e {
 		}
 		unsigned char &operator[](int index)
 		{
-			if (0 <= index && index < _size)
-				return *(_start + index);
+			size_t i = (size_t)index;
+			if (i < _size)
+				return *(_start + i);
 			return _e;
 		}
 

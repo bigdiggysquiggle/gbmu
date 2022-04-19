@@ -39,7 +39,7 @@
 //to nail down the logic perfectly first.
 ppu::ppu(std::shared_ptr<mmu> mem, unsigned char type) : _mmu(mem)
 {
-	for (unsigned i; i < 23040; i++)
+	for (unsigned i = 0; i < 23040; i++)
 		pixels[i] = 0x00FFFFFF;
 	_x = 0;
 	_y = 0;
@@ -203,7 +203,7 @@ void	ppu::drawpix()
 			{
 				try{genBuf(bwtile);}
 				catch (const char *e)
-				{/*PRINT_DEBUG("BG %s", e);*/}
+				{PRINT_DEBUG("BG %s", e);}
 				cstate = 0;
 			}
 			else
@@ -213,7 +213,7 @@ void	ppu::drawpix()
 //			PRINT_DEBUG("tgen");
 			try{genBuf(bwtile);}
 			catch (const char *e)
-			{/*PRINT_DEBUG("BG %s", e);*/}
+			{PRINT_DEBUG("BG %s", e);}
 			spritecheck();
 			break;
 		case 4:
@@ -249,11 +249,12 @@ void	ppu::_spritebranch()
 
 void	ppu::_drawpix(bool repeat)
 {
-	unsigned char pix;
+	unsigned char pix = 0;
 	unsigned char spix = 0;
+//	pix = bwtile.getPix();
 	try {pix = bwtile.getPix();}
 	catch (const char *e)
-	{/*PRINT_DEBUG("BG %s", e);*/}
+	{PRINT_DEBUG("BG %s", e);}
 	if (_dclk)
 	{
 		_dclk--;
@@ -271,6 +272,7 @@ void	ppu::_drawpix(bool repeat)
 	{
 //		PRINT_DEBUG("_x %u sx %u", _x, sx);
 //		PRINT_DEBUG("lcdc & 2 %u sptile[%u] %u (!spriteattr & 1<<7 %u || !bwtile %u || !lcdc & 1 %u) %u", SPRITE_ON, i, sptile[i], SP_PRIO, bwtile[_x / 8][ex], BGW_ON, (!SP_PRIO || !bwtile[_x / 8][ex] || !BGW_ON));
+//		spix = sptile.getPix();
 		try {spix = sptile.getPix();}
 		catch (const char *e)
 		{PRINT_DEBUG("Sprite %s", e);}
@@ -338,7 +340,7 @@ void	ppu::spritecheck()
 	{
 		unsigned ex = _x + 8;
 		for (unsigned char i = 0; i < spritecount; i++)
-			if (!sprite && spriteattr[i][SPRITE_X] <= ex && ex < (spriteattr[i][SPRITE_X] + 8))
+			if (!sprite && spriteattr[i][SPRITE_X] <= ex && ex < (spriteattr[i][SPRITE_X] + (unsigned)8))
 			{
 				spriteindex = i;
 				_sclk = 9; //the first two cycles are happening here
