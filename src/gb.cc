@@ -39,7 +39,6 @@ void	gb::load_cart(char *name)
 void	gb::frame_advance()
 {
 	unsigned framecount = 0;
-	unsigned cyc;
 	while (framecount < FRAME_TIME)
 	{
 		_mmu->pollInput();

@@ -24,16 +24,16 @@ class ppu {
 			unsigned char lcdon = (_mmu->PaccessAt(0xFF40) & (1 << 7));
 			if (lcdon)
 			{
-//				PRINT_DEBUG("lcdon");
+				PRINT_DEBUG("lcdon");
 				if (_off == true)
 					_off = false;
 				if (_oncyc)
 				{
 					_oncyc = (cyc > _oncyc) ? 0 : _oncyc - cyc;
-//					PRINT_DEBUG("_oncyc %u", _oncyc);
+					PRINT_DEBUG("_oncyc %u", _oncyc);
 					if (!_oncyc)
 					{
-//						PRINT_DEBUG("statup");
+						PRINT_DEBUG("statup");
 						palletcalc();
 						_mmu->STATupdate(2);
 					}
@@ -42,7 +42,7 @@ class ppu {
 			}
 			else
 			{
-//				PRINT_DEBUG("lcdoff");
+				PRINT_DEBUG("lcdoff");
 				if (_off == false)
 				{
 					_off = true;

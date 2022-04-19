@@ -38,6 +38,7 @@ re: fclean all
 lre: fclean
 	$(COMP) -fsanitize=address $(SRCS) -o $(NAME) $(O) $(L)
 
+#-Wall -Werror -Wextra -Wshadow -pedantic -O2
 vre: fclean
 	$(COMP) -g -pg $(SRCS) -o $(NAME) $(O) $(L)
 

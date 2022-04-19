@@ -526,7 +526,7 @@ int			debuggerator::out_file;
 unsigned	debuggerator::flags;
 unsigned	debuggerator::format_type;
 unsigned	debuggerator::output_data;
-unsigned	debuggerator::i; 
+int			debuggerator::i; 
 
 struct sub_flags {
 	const char *f_string;
@@ -617,7 +617,7 @@ void	debuggerator::cpu_print()
 	if (format_type == (unsigned)formatflags::binjgb)
 	{
 		unsigned char _ppmode = _ppu->getMode();
-		dprintf(out_file, "A:%02hhX F:%C%C%C%C BC:%04X DE:%04x HL:%04x SP:%04x PC:%04x (cy: %llu) ppu:%c%u ", _cpu->_registers.a, _cpu->_registers.f & 0x80 ? 'Z' : '-', _cpu->_registers.f & 0x40 ? 'N' : '-', _cpu->_registers.f & 0x20 ? 'H' : '-', _cpu->_registers.f & 0x10 ? 'C' : '-', _cpu->_registers.bc, _cpu->_registers.de, _cpu->_registers.hl, _cpu->_registers.sp, _cpu->_registers.pc, _cycles, _ppu->_off == false ? '+' : '-', _ppmode);
+		dprintf(out_file, "A:%02hhX F:%C%C%C%C BC:%04hX DE:%04hx HL:%04hx SP:%04hx PC:%04hx (cy: %llu) ppu:%c%u ", _cpu->_registers.a, _cpu->_registers.f & 0x80 ? 'Z' : '-', _cpu->_registers.f & 0x40 ? 'N' : '-', _cpu->_registers.f & 0x20 ? 'H' : '-', _cpu->_registers.f & 0x10 ? 'C' : '-', _cpu->_registers.bc, _cpu->_registers.de, _cpu->_registers.hl, _cpu->_registers.sp, _cpu->_registers.pc, _cycles, _ppu->_off == false ? '+' : '-', _ppmode);
 		if (_cpu->_registers.pc < 0x4000)
 			dprintf(out_file, "|[00]");
 		else if (_cpu->_registers.pc < 0x8000)
@@ -692,7 +692,6 @@ void	debuggerator::debug_msg()
 void	debuggerator::frame_advance()
 {
 	unsigned framecount = 0;
-	unsigned cyc;
 	while (framecount < FRAME_TIME)
 	{
 		debug_msg();

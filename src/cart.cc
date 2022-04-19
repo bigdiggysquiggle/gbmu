@@ -154,15 +154,19 @@ std::unique_ptr<cart>	cart::loadCart(char *fname)
 	return NULL;
 }
 
+//this is a dummy function so that carts that don't have an MBC don't break things if
+//they attempt to write values to ROM space
 void	cart::writeTo(unsigned short addr, unsigned char val)
 {
+	(void)addr;
+	(void)val;
 	return ;
 }
 
-//no official carts have ram with no mbc
+//no official carts have ram with no mbc (allegedly)
 unsigned char	cart::readFrom(unsigned short addr)
 {
-	if (0x0000 <= addr && addr <= 0x3FFF)
+	if (addr <= 0x3FFF)
 		return (_romSpace[0x00][addr]);
 	else if (0x4000 <= addr && addr <= 0x7FFF)
 		return (_romSpace[0x01][addr - 0x4000]);
@@ -195,7 +199,7 @@ mbc1::mbc1(unsigned romBanks, unsigned ramBanks, FILE *rom)
 void			mbc1::writeTo(unsigned short addr, unsigned char val)
 {
 	PRINT_DEBUG("write 0x%02hhx to 0x%04hx", val, addr);
-	if (0x0000 <= addr && addr <= 0x1FFF)
+	if (addr <= 0x1FFF)
 		_ramg = val & 0x0F;
 	else if (0x2000 <= addr && addr <= 0x3FFF)
 		_bank1 = (val & 0x1F) ? (val & 0x1F) : 1;
@@ -263,7 +267,7 @@ unsigned char	mbc1::_rambankRead(unsigned short addr)
 unsigned char	mbc1::readFrom(unsigned short addr)
 {
 //	PRINT_DEBUG("we in here 0x%04x", addr);
-	if (0x0000 <= addr && addr <= 0x7FFF)
+	if (addr <= 0x7FFF)
 		return(_rombankRead(addr));
 	else if (0xA000 <= addr && addr <= 0xBFFF)
 		return (_rambankRead(addr - 0xA000));
@@ -279,7 +283,8 @@ unsigned char	mbc1::getBank(unsigned short addr)
 }
 
 mbc2::mbc2(unsigned romBanks, unsigned ramBanks, FILE *rom)
-{
+{ //MBC2 chips have a consistent fixed number of ram banks, this variable is only here for ease of mutability
+	(void)ramBanks;
 	printf("MBC2\n");
 	_romSpace.resize(romBanks ? romBanks : 2);
 	_ramSize = 0x200;
@@ -295,7 +300,7 @@ mbc2::mbc2(unsigned romBanks, unsigned ramBanks, FILE *rom)
 
 void	mbc2::writeTo(unsigned short addr, unsigned char val)
 {
-	if (0x0000 <= addr && addr <= 0x3FFF)
+	if (addr <= 0x3FFF)
 	{
 		if ((0x0F00 & addr) == 0x0100)
 			_ramg = val;
@@ -308,7 +313,7 @@ void	mbc2::writeTo(unsigned short addr, unsigned char val)
 
 unsigned char	mbc2::readFrom(unsigned short addr)
 {
-	if (0x0000 <= addr && addr <= 0x7FFF)
+	if (addr <= 0x7FFF)
 		_rombankRead(addr);
 	else if (0xA000 <= addr && addr <= 0xBFFF)
 		_ramRead(addr - 0xA000);
@@ -330,7 +335,7 @@ void	mbc2::_ramWrite(unsigned short addr, unsigned char val)
 
 unsigned char	mbc2::_rombankRead(unsigned short addr)
 {
-	if (0x0000 <= addr && addr <= 0x3FFF)
+	if (addr <= 0x3FFF)
 		return (_romSpace[0x00][addr]);
 	return (_romSpace[_romg][addr - 0x4000]);
 }
@@ -371,7 +376,7 @@ mbc3::mbc3(unsigned romBanks, unsigned ramBanks, FILE *rom)
 
 void			mbc3::writeTo(unsigned short addr, unsigned char val)
 {
-	if (0x0000 <= addr && addr <= 0x1FFF)
+	if (addr <= 0x1FFF)
 		_ramg = val;
 	else if (0x2000 <= addr && addr <= 0x3FFF)
 		_rombank = val & 0x7F ? val : 1;
@@ -452,7 +457,7 @@ unsigned char	mbc3::_rambankRead(unsigned short addr)
 
 unsigned char	mbc3::readFrom(unsigned short addr)
 {
-	if (0x0000 <= addr && addr <= 0x7FFF)
+	if (addr <= 0x7FFF)
 		return(_rombankRead(addr));
 	else if (0xA000 <= addr && addr <= 0xBFFF)
 		return (_rambankRead(addr - 0xA000));
@@ -461,6 +466,8 @@ unsigned char	mbc3::readFrom(unsigned short addr)
 
 unsigned char	mbc3::getBank(unsigned short addr)
 {
+	(void)addr; //verify that I am properly accessing banks in different places
+				//and that this is only here for easy of mutability
 	return _rombank;
 }
 
@@ -481,7 +488,7 @@ mbc5::mbc5(unsigned romBanks, unsigned ramBanks, FILE *rom)
 #include <stdlib.h>
 void			mbc5::writeTo(unsigned short addr, unsigned char val)
 {
-	if (0x0000 <= addr && addr <= 0x1FFF)
+	if (addr <= 0x1FFF)
 //		_ramg = val & 0x0F;
 		_ramg = val;
 	else if (0x2000 <= addr && addr <= 0x2FFF)
@@ -538,7 +545,7 @@ unsigned char	mbc5::_rambankRead(unsigned short addr)
 
 unsigned char	mbc5::readFrom(unsigned short addr)
 {
-	if (0x0000 <= addr && addr <= 0x7FFF)
+	if (addr <= 0x7FFF)
 		return(_rombankRead(addr));
 	else if (0xA000 <= addr && addr <= 0xBFFF)
 		return (_rambankRead(addr - 0xA000));
@@ -547,5 +554,6 @@ unsigned char	mbc5::readFrom(unsigned short addr)
 
 unsigned char	mbc5::getBank(unsigned short addr)
 {
+	(void)addr; //similar to mbc3
 	return _bank1 | (_bank2 ? 0x0100 : 0x0000);
 }

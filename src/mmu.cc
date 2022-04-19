@@ -228,7 +228,6 @@ struct iomask _IOmasks[] = {
 mmu::mmu(unsigned char type)
 {
 	_cgb_mode = 0;//set to 0x03 for easy bank switch
-	int i = -1;
 	_vram.resize(2);//handle cgb banks later
 	_wram1.resize(7);//handle cgb banks later
 	_IOReg[0x50] = 0;
@@ -331,7 +330,7 @@ void	mmu::setINTS(void)
 unsigned char	mmu::PaccessAt(unsigned short addr)
 {
 //	PRINT_DEBUG("PAccessing 0x%04x", addr);
-	unsigned char	val;
+	unsigned char	val = 0xFF;
 	if (addr <= 0x7FFF || (0xA000 <= addr && addr <= 0xBFFF))
     {
         if ((addr < 0x100) && ! (_IOReg[0x50] & 0x01))

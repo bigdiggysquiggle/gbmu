@@ -52,6 +52,7 @@ class debuggerator : public gb {
 		}
 		debuggerator(sys_type type)
 		{
+			(void)type; // in the future, type will choose what kind of gameboy to emulate
 			flags = 0;
 			format_type = formatflags::default_output;
 			output_data = 0;
@@ -73,7 +74,7 @@ class debuggerator : public gb {
 		static unsigned flags;
 		static unsigned format_type;
 		static unsigned output_data;
-		static unsigned i;
+		static int		i;
 
 		typedef void (*f_func)(int, char **);
 		struct s_flags {

@@ -17,6 +17,8 @@
 
 int main(int ac, char **av)
 {
+	if (ac == 1)
+		printf("Error: no file given");
 #ifdef DEBUG_PRINT_ON
 	debuggerator _gb;
 	try {
@@ -39,7 +41,7 @@ int main(int ac, char **av)
 		return 1;
 	}
 	SDL_Window *win;
-	SDL_Surface *screen;
+//	SDL_Surface *screen;
 	SDL_Texture *frame;
 	SDL_Renderer *render;
 	if (SDL_Init(SDL_INIT_VIDEO) < 0)
@@ -49,7 +51,7 @@ int main(int ac, char **av)
 	}
 	atexit(SDL_Quit);
 	win = SDL_CreateWindow("gbmu", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIN_WIDTH, WIN_HEIGHT, SDL_WINDOW_SHOWN);
-	screen = SDL_GetWindowSurface(win);
+//	screen = SDL_GetWindowSurface(win);
 	if (!win)
 	{
 		printf("Window fail\n");
