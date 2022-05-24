@@ -29,7 +29,7 @@ int main(int ac, char **av)
 		return (1);
 	}
 #else
-	gb	_gb = NULL;
+	gb	_gb;
 #endif
 	try 
 	{
