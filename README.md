@@ -1,7 +1,7 @@
-For the current status of this project, check out the dev
-branch. I'm refraining from merging it into this branch
-until it at least functions as well as the code in the
-master branch.
+For the current status of this project, check out the
+refactor branch. I'm refraining from merging it into this
+branch until it at least functions as well as the code in
+the master branch.
 
 At the current time, the master branch only plays Tetris
 successfully.
