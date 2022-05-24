@@ -1,3 +1,11 @@
+For the current status of this project, check out the dev
+branch. I'm refraining from merging it into this branch
+until it at least functions as well as the code in the
+master branch.
+
+At the current time, the master branch only plays Tetris
+successfully.
+
 A gameboy/gameboy color emulator written in C++. I chose C++
 as I felt that the features it offers would be the simplest
 way to implement the different permutations of each cpu
