@@ -14,7 +14,9 @@ NAME = gbmu
 
 SRCS = ./src/*.cc
 
-COMP = g++ -O3
+COMP = clang++ -O3
+
+#FLAGS = -Wall -Werror -Wextra -Wshadow -pedantic -O2
 
 L = -lSDL2
 
@@ -24,7 +26,7 @@ debug: COMP += -DDEBUG_PRINT_ON
 debug: vre
 
 $(NAME):
-	$(COMP) $(SRCS) -o $(NAME) $(O) $(L)
+	$(COMP) $(SRCS) $(FLAGS) -o $(NAME) $(O) $(L)
 
 clean:
 	rm -rf $(NAME)
@@ -38,7 +40,6 @@ re: fclean all
 lre: fclean
 	$(COMP) -fsanitize=address $(SRCS) -o $(NAME) $(O) $(L)
 
-#-Wall -Werror -Wextra -Wshadow -pedantic -O2
 vre: fclean
 	$(COMP) -g -pg $(SRCS) -o $(NAME) $(O) $(L)
 

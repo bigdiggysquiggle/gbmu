@@ -1,3 +1,5 @@
+figure out why it's getting locked out by the oam process
+
 reimplement stop command
 
 ideally find a way to map several arrays into one super array

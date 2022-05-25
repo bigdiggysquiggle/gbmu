@@ -188,7 +188,7 @@ mbc1::mbc1(unsigned romBanks, unsigned ramBanks, FILE *rom)
 	_romSpace.resize(romBanks ? romBanks : 2);
 	_ramSpace.resize(ramBanks);
 	for (unsigned i = 0x00; i < romBanks; i++)
-		fread(&_romSpace[i][0], 1, 0x4000, rom);
+		fread(&_romSpace[i][0x00], 1, 0x4000, rom);
 	_ramg = 0;
 	_bank1 = 1;
 	_bank2 = 0;
@@ -289,7 +289,7 @@ mbc2::mbc2(unsigned romBanks, unsigned ramBanks, FILE *rom)
 	_romSpace.resize(romBanks ? romBanks : 2);
 	_ramSize = 0x200;
 	for (unsigned i = 0x00; i < romBanks; i++)
-		fread(&_romSpace[i][0], 1, 0x4000, rom);
+		fread(&_romSpace[i][0x00], 1, 0x4000, rom);
 	fclose(rom);
 	_ramg = 0;
 	_romg = 1;
@@ -370,7 +370,7 @@ mbc3::mbc3(unsigned romBanks, unsigned ramBanks, FILE *rom)
 	_rtcDL = 0;
 	_rtcDH = 0;
 	for (unsigned i = 0x00; i < romBanks; i++)
-		fread(&_romSpace[i][0], 1, 0x4000, rom);
+		fread(&_romSpace[i][0x00], 1, 0x4000, rom);
 	fclose(rom);
 }
 
@@ -477,7 +477,7 @@ mbc5::mbc5(unsigned romBanks, unsigned ramBanks, FILE *rom)
 	_romSpace.resize(romBanks ? romBanks : 2);
 	_ramSpace.resize(ramBanks);
 	for (unsigned i = 0x00; i < romBanks; i++)
-		fread(&_romSpace[i][0], 1, 0x4000, rom);
+		fread(&_romSpace[i][0x00], 1, 0x4000, rom);
 	_ramg = 0;
 	_bank1 = 0;
 	_bank2 = 0;

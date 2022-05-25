@@ -236,9 +236,11 @@ class cpu {
 		}
 		inline void cycle()
 		{
+//			printf("cycle\n");
 			cyc += 4;
 			_mmu->timerInc(4);
 			_ppu->cycle();
+			_inCycles += 4;
 		}
 		friend class debuggerator;
 	};

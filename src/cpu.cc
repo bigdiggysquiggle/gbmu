@@ -928,7 +928,6 @@ void	cpu::rst(unsigned short addr)
 	_registers.pc = addr;
 	cycle();
 	cycle();
-	cycle();
 //	PRINT_DEBUG("rst to %hx", addr);
 //	exit(1);
 }
@@ -979,12 +978,15 @@ void	cpu::reti(void)
 
 unsigned char	cpu::opcode_parse()
 {
+	_inCycles = 0;
 	_mmu->setINTS();
 	cyc = interrupt_check();
 	cycle();
+//	printf("haltcheck %d ", haltcheck);
 	if (_halt == true)
 		return 4;
 	unsigned char opcode = _mmu->accessAt(_registers.pc);
+	printf("pc: 0x%04hx opcode 0x%02hhx HL 0x%04hx\n", _registers.pc, opcode, _registers.hl);
 	_registers.pc += haltcheck;
 	if (!haltcheck)
 		haltcheck = 1;
@@ -1159,6 +1161,7 @@ unsigned char	cpu::opcode_parse()
 			break;
 
 		case 0x20:	//jr nz, d
+			cycle();
 			jr(_mmu->accessAt(_registers.pc++), FNZ);
 			break;
 
@@ -1385,7 +1388,6 @@ unsigned char	cpu::opcode_parse()
 
 		case 0x4f:	//ld c,a
 			ld(&_registers.c, _registers.a);
-			cycle();
 			break;
 
 		case 0x50:
@@ -1585,47 +1587,38 @@ unsigned char	cpu::opcode_parse()
 
 		case 0x77:
 			ld((unsigned char *)NULL, _registers.a);
-			cycle();
 			break;
 
 		case 0x78:
 			ld(&_registers.a, _registers.b);
-			cycle();
 			break;
 
 		case 0x79:
 			ld(&_registers.a, _registers.c);
-			cycle();
 			break;
 
 		case 0x7a:
 			ld(&_registers.a, _registers.d);
-			cycle();
 			break;
 
 		case 0x7b:
 			ld(&_registers.a, _registers.e);
-			cycle();
 			break;
 
 		case 0x7c:
 			ld(&_registers.a, _registers.h);
-			cycle();
 			break;
 
 		case 0x7d:
 			ld(&_registers.a, _registers.l);
-			cycle();
 			break;
 
 		case 0x7e:
 			ld(&_registers.a, _registers.hl);
-			cycle();
 			break;
 
 		case 0x7f:
 			ld(&_registers.a, _registers.a);
-			cycle();
 			break;
 
 //ADD
@@ -2246,5 +2239,11 @@ unsigned char	cpu::opcode_parse()
 
 	}
 	_registers.f &= 0xF0;
+	unsigned char inst_cyc_tab[][2] = {{4, 0}, {12, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {20, 0}, {8, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {12, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {12, 0}, {8, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {12, 8}, {12, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {12, 8}, {8, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {12, 8}, {12, 0}, {8, 0}, {8, 0}, {12, 0}, {12, 0}, {12, 0}, {4, 0}, {12, 8}, {8, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {8, 0}, {8, 0}, {8, 0}, {8, 0}, {8, 0}, {8, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {20, 8}, {12, 0}, {16, 12}, {16, 0}, {24, 12}, {16, 0}, {8, 0}, {16, 0}, {20, 8}, {16, 0}, {16, 12}, {4, 0}, {24, 12}, {24, 0}, {8, 0}, {16, 0}, {20, 8}, {12, 0}, {16, 12}, {0, 0}, {24, 12}, {16, 0}, {8, 0}, {16, 0}, {20, 8}, {16, 0}, {16, 12}, {0, 0}, {24, 12}, {0, 0}, {8, 0}, {16, 0}, {12, 0}, {12, 0}, {8, 0}, {0, 0}, {0, 0}, {16, 0}, {8, 0}, {16, 0}, {16, 0}, {4, 0}, {16, 0}, {0, 0}, {0, 0}, {0, 0}, {8, 0}, {16, 0}, {12, 0}, {12, 0}, {8, 0}, {4, 0}, {0, 0}, {16, 0}, {8, 0}, {16, 0}, {12, 0}, {8, 0}, {16, 0}, {4, 0}, {0, 0}, {0, 0}, {8, 0}, {16, 0}};
+	if ((_inCycles != inst_cyc_tab[opcode][0]) && (_inCycles != inst_cyc_tab[opcode][1]))
+	{
+		printf("Error: %hhd != %hhd or 0x%hhd (pc: 0x%04hx\n opcode: 0x%02hhx)\n", _inCycles, inst_cyc_tab[opcode][0], inst_cyc_tab[opcode][1],_registers.pc, opcode);
+		exit(1);
+	}
 	return cyc;
 }

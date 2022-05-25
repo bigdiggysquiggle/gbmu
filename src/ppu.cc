@@ -73,6 +73,7 @@ void	ppu::cycle()
 
 void	ppu::_cycle(bool repeat)
 {
+//	printf("doop\n");
 	if (offcheck(2))
 	{
 		if (repeat == true)

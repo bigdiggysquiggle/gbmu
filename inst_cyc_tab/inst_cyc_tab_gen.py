@@ -23,4 +23,4 @@ for entry in endtab:
 		proctab.append([ int(entry), 0 ])
 	else:
 		proctab.append([ int(string[0]), int(string[1]) ])
-print("int test_cyctab[][2] = " + str(proctab).replace('[', '{').replace(']', '}') + ';')
+print("unsigned char inst_cyc_tab[][2] = " + str(proctab).replace('[', '{').replace(']', '}') + ';')
