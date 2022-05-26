@@ -1,6 +1,7 @@
 #ifndef CART
 #define CART
 #include <vector>
+#include <array>
 #include <memory>
 #include <cstdio>
 
