@@ -1,4 +1,4 @@
-figure out why it's getting locked out by the oam process
+figure out why it's getting stuck in the bootloader loop that's supposed to only create the tiles in vram
 
 reimplement stop command
 
