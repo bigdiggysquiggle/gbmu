@@ -1,5 +1,6 @@
 #ifndef MEM
 #define MEM
+#include "print_debug.hpp"
 #include "cart.hpp"
 #include <SDL2/SDL.h>
 #include <vector>
@@ -28,12 +29,16 @@
 // 0xFF00 - 0xFF7F IO
 // - hardware mapped registers and such
 // - this is where the actual hardware behaviour is configured
+//   and where info about hardware can be read
 // 0xFF80 - 0xFFFE hram
 // - slightly faster than other ram. 
 
+#define DMG 1
+#define GBC 2
+
 class mmu {
 	public:
-		mmu();
+		mmu(unsigned char);
 		void pollInput(void);
 		void loadCart(char *filename);
 		void setINTS(void);
@@ -43,7 +48,14 @@ class mmu {
 		unsigned char	PaccessAt(unsigned short);
 		void			writeTo(unsigned short, unsigned char);
 		void	timerInc(unsigned cycles);
-
+		inline void	dmaTransfer()
+		{
+			unsigned short byte = (640 - _oamtime) / 4;
+//			writeTo(0xFE00 + byte, PaccessAt(((unsigned short)_IOReg[0x46] << 8) + byte));
+			_oam[byte] = PaccessAt(((unsigned short)_IOReg[0x46] << 8) + byte);
+			_oamtime = _oamtime - 4;
+//			PRINT_DEBUG("_oamtime %u", _oamtime);
+		}
 		unsigned char	_cgb_mode;
 		bool			vramWrite;
 		unsigned short	_oamtime;
@@ -51,7 +63,7 @@ class mmu {
 		//				FF70 and FF4F cgb modes
 
 	private:
-		std::unique_ptr<cart>	_rom;
+		std::unique_ptr<cart>	_cart;
 		std::vector<std::array<unsigned char, 0x2000>>	_vram;
 		unsigned char	_wram0[0x1000];
 		std::vector<std::array<unsigned char, 0x1000>>	_wram1;
@@ -63,6 +75,7 @@ class mmu {
 		unsigned		_tac0;
 
 		void	_IOwrite(unsigned short, unsigned char);
+		friend class debuggerator;
 };
 
 #endif

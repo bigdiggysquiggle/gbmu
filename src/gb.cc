@@ -1,79 +1,57 @@
-#include <unistd.h>
-#include "cpu.hpp"
-#include "cart.hpp"
-#include "mmu.hpp"
-#include "ppu.hpp"
-#include <exception>
-#include <iostream>
-#include <cstring>
-#include <chrono>
+#include "print_debug.hpp"
+#include "gb.hpp"
 #include <SDL2/SDL.h>
 
-#define WIN_WIDTH 160
-#define WIN_HEIGHT 144
+//Designed to contain the classes that make up the
+//individual pieces of hardware inside of an actual
+//gameboy. Makes it easy to generate different types
+//of emulated hardware as well as reset the emulation
+//and even potentially change the hardware types on
+//the fly.
 
-int main(int ac, char **av)
+gb::gb()
 {
-	if (ac != 2 && ac != 3)
-		return 0;
-	if (ac == 3 && strcmp("-d", av[2]))
-		return 1;
-	auto memunit = std::make_shared<mmu>();
-	cpu	processor(memunit);
-	ppu graphics(memunit);
-	processor.debug = ac == 3 ? true : false;
-	try 
+	_cycles = 0;
+	cyc = 0;
+	_mmu = std::make_shared<mmu>(dmg);
+	_ppu = std::make_shared<ppu>(_mmu, dmg);
+	_cpu = std::make_unique<cpu>(_mmu, _ppu);
+}
+
+gb::gb(sys_type type)
+{
+	_cycles = 0;
+	cyc = 0;
+	_mmu = std::make_shared<mmu>(type);
+	_ppu = std::make_shared<ppu>(_mmu, type);
+	_cpu = std::make_unique<cpu>(_mmu, _ppu);
+}
+
+//passthrough function for the MMU to load and map
+//the ROM and RAM into memory
+
+void	gb::load_cart(char *name)
+{
+	_mmu->loadCart(name);
+	_cpu->reset();
+}
+
+void	gb::frame_advance()
+{
+	unsigned framecount = 0;
+	while (framecount < FRAME_TIME)
 	{
-		processor._mmu->loadCart(av[1]);
-//		processor.checkRom();
+		_mmu->pollInput();
+		cyc = _cpu->opcode_parse();
+//		PRINT_DEBUG("cyc = %u", cyc);
+//		_mmu->timerInc(cyc);
+		if (_cpu->imeCheck())
+			cyc += _cpu->opcode_parse();
+		_cycles += cyc;
+		framecount += cyc;
+		if (_cycles >= CPU_FREQ)
+			_cycles -= CPU_FREQ;
 	}
-	catch (const char *msg)
-	{
-		std::cout << msg << std::endl;
-		return 1;
-	}
-	SDL_Window *win;
-	SDL_Surface *screen;
-	SDL_Texture *frame;
-	SDL_Renderer *render;
-	if (SDL_Init(SDL_INIT_VIDEO) < 0)
-	{
-		printf("SDL fail\n");
-		return 1;
-	}
-	atexit(SDL_Quit);
-	win = SDL_CreateWindow("gbmu", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, WIN_WIDTH, WIN_HEIGHT, SDL_WINDOW_SHOWN);
-	screen = SDL_GetWindowSurface(win);
-	if (!win)
-	{
-		printf("Window fail\n");
-		return 1;
-	}
-	render = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
-	frame = SDL_CreateTexture(render, SDL_PIXELFORMAT_RGBA32,SDL_TEXTUREACCESS_STREAMING, 160, 144);
-	unsigned	cycles = 0;
-	unsigned char cyc;
-	SDL_Event e;
-	bool	quit = false;
-	SDL_PumpEvents();
-	while (quit == false)
-	{
-		memunit->pollInput();
-		cyc = processor.opcode_parse();
-		memunit->timerInc(cyc);
-		if ((cyc >= graphics._cycles && graphics.frameRender(cyc)) || graphics.offcheck(cyc))
-		{
-			SDL_UpdateTexture(frame, NULL, graphics.pixels, (160 * 4));
-			SDL_RenderCopy(render, frame, NULL, NULL);
-			SDL_RenderPresent(render);
-		}
-		cycles += cyc;
-		if (cycles >= 4194304)
-			cycles -= 4194304;
-		if (SDL_PollEvent(&e) != 0 && (e.type == SDL_QUIT || (e.type == SDL_KEYDOWN && e.key.keysym.sym == SDLK_ESCAPE)))
-				quit = true;
-	}
-	SDL_DestroyRenderer(render);
-	SDL_DestroyWindow(win);
-	return 0;
+//	for (unsigned i = 0; i < 23040; i++)
+//		PRINT_DEBUG("0x%08X", _ppu->pixels[23040]);
 }

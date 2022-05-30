@@ -1,6 +1,7 @@
 #ifndef CPU____
 #define CPU____
 #include "mmu.hpp"
+#include "ppu.hpp"
 //check endian
 
 union address	{
@@ -61,20 +62,23 @@ enum bitflags {
 
 class cpu {
 	public:
-		cpu(std::shared_ptr<mmu>);
-		std::shared_ptr<mmu>	_mmu;//change to shared pointer
+		cpu(std::shared_ptr<mmu>, std::shared_ptr<ppu>);
 		unsigned char	interrupt_check(void);
-		void			reset(char *);
+		void			reset();
 		void			setInterrupt(unsigned char);
-		unsigned char	opcode_parse(unsigned char);
 		unsigned char	opcode_parse(void);
-		bool			debug;
+		unsigned long	cyc;
+		int				imeCheck();
 //		void		checkRom(void);
 
 	private:
+		std::shared_ptr<mmu>	_mmu;
+		std::shared_ptr<ppu>	_ppu;
 		struct registers		_registers;
 		unsigned char	_inCycles;
 		bool			_halt;
+		unsigned char	haltcheck;
+		unsigned char	ime_set;
 //		unsigned char	*_regtab(unsigned char);
 //		unsigned short	*_pairtabddss(unsigned char);
 //		unsigned short	*_pairtabqq(unsigned char);
@@ -230,6 +234,15 @@ class cpu {
 					break;
 			}
 		}
+		inline void cycle()
+		{
+//			printf("cycle\n");
+			cyc += 4;
+			_mmu->timerInc(4);
+			_ppu->cycle();
+			_inCycles += 4;
+		}
+		friend class debuggerator;
 	};
 
 #endif

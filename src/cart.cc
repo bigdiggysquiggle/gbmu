@@ -1,3 +1,4 @@
+#include "print_debug.hpp"
 #include "cart.hpp"
 
 cart::cart()
@@ -5,6 +6,9 @@ cart::cart()
 	return ;
 }
 
+//construct a barebones cart with the absolute minimum
+//required memory space. Fill the first two banks with
+//ROM data
 cart::cart(FILE *rom, unsigned short ram)
 {
 	_romSpace.resize(0x02);
@@ -16,6 +20,9 @@ cart::cart(FILE *rom, unsigned short ram)
 	return;
 }
 
+//uses a byte from the ROM's header to determine the
+//actual size used by the game so _romSpace can be
+//resized if needed
 unsigned short 	cart::romSizetab(unsigned char size)
 {
 	switch(size)
@@ -50,6 +57,9 @@ unsigned short 	cart::romSizetab(unsigned char size)
 	return 0x00;
 }
 
+//uses a byte from the ROM's header to determine the
+//amount of RAM that it needs so _ramSpace can be resized
+//if needed
 unsigned short	cart::ramSizetab(unsigned char size)
 {
 	switch(size)
@@ -75,6 +85,10 @@ unsigned short	cart::ramSizetab(unsigned char size)
 	}
 	return 0x00;
 }
+
+//factory method used to generate the type of cartridge
+//used by the rom. determines ramsize, romsize, and MBC
+//based on bytes located in the ROM header
 std::unique_ptr<cart>	cart::loadCart(char *fname)
 {
 	if (!fname)
@@ -82,6 +96,8 @@ std::unique_ptr<cart>	cart::loadCart(char *fname)
 	//cart reading. 0x147 mbc 0x148 romsize 0x149 ramsize
 	unsigned char	header[0x14F];
 	FILE *rom = fopen(fname, "r");
+	if (rom == NULL)
+		throw "Error: invalid rom file";
 	fseek(rom, 0, SEEK_END);
 	_romSize = ftell(rom);
 	if (_romSize < 0x14F)
@@ -93,8 +109,8 @@ std::unique_ptr<cart>	cart::loadCart(char *fname)
 	fread(header, 1, 0x14F, rom);
 	rewind(rom);
 	GBbit = header[0x143];
-	printf("Cart %.16s\n", &header[0x134]);
-	printf("MBC 0x%02hhx Romsize byte 0x%02hhx Ramsize byte 0x%02hhx\n\n", header[0x147], header[0x148], header[0x149]);
+	PRINT_DEBUG("Cart %.16s", &header[0x134]);
+	PRINT_DEBUG("MBC 0x%02hhx Romsize byte 0x%02hhx Ramsize byte 0x%02hhx", header[0x147], header[0x148], header[0x149]);
 	switch (header[0x147])
 	{
 		case 0x00: //ROM ONLY
@@ -138,15 +154,19 @@ std::unique_ptr<cart>	cart::loadCart(char *fname)
 	return NULL;
 }
 
+//this is a dummy function so that carts that don't have an MBC don't break things if
+//they attempt to write values to ROM space
 void	cart::writeTo(unsigned short addr, unsigned char val)
 {
+	(void)addr;
+	(void)val;
 	return ;
 }
 
-//no official carts have ram with no mbc
+//no official carts have ram with no mbc (allegedly)
 unsigned char	cart::readFrom(unsigned short addr)
 {
-	if (0x0000 <= addr && addr <= 0x3FFF)
+	if (addr <= 0x3FFF)
 		return (_romSpace[0x00][addr]);
 	else if (0x4000 <= addr && addr <= 0x7FFF)
 		return (_romSpace[0x01][addr - 0x4000]);
@@ -155,21 +175,31 @@ unsigned char	cart::readFrom(unsigned short addr)
 	return (0xFF);
 }
 
+unsigned char	cart::getBank(unsigned short addr)
+{
+	if (addr < 0x4000)
+		return 0;
+	return 1;
+}
+
 mbc1::mbc1(unsigned romBanks, unsigned ramBanks, FILE *rom)
 {
-	printf("MBC1 rom %u ram %u\n", romBanks, ramBanks);
+	PRINT_DEBUG("MBC1 rom %u ram %u", romBanks, ramBanks);
 	_romSpace.resize(romBanks ? romBanks : 2);
 	_ramSpace.resize(ramBanks);
 	for (unsigned i = 0x00; i < romBanks; i++)
-		fread(&_romSpace[i][0], 1, 0x4000, rom);
+		fread(&_romSpace[i][0x00], 1, 0x4000, rom);
+	_ramg = 0;
 	_bank1 = 1;
+	_bank2 = 0;
+	_mode = 0;
 	fclose(rom);
 }
 
 void			mbc1::writeTo(unsigned short addr, unsigned char val)
 {
-	printf("write 0x%02hhx to 0x%04hx\n\n", val, addr);
-	if (0x0000 <= addr && addr <= 0x1FFF)
+	PRINT_DEBUG("write 0x%02hhx to 0x%04hx", val, addr);
+	if (addr <= 0x1FFF)
 		_ramg = val & 0x0F;
 	else if (0x2000 <= addr && addr <= 0x3FFF)
 		_bank1 = (val & 0x1F) ? (val & 0x1F) : 1;
@@ -192,13 +222,13 @@ void			mbc1::writeTo(unsigned short addr, unsigned char val)
 
 void		mbc1::_ramWrite(unsigned short addr, unsigned char val)
 {
-	printf("ffffffffffff\n");
+	PRINT_DEBUG("ffffffffffff");
 	if ((_ramg & 0x0F) != 0x0A)
 		return ;
 	unsigned char banknum = 0;
 	if (_ramSize > 0x2000)
 		banknum = _mode ? _bank2 : 0;
-	printf("banknum %u\n", banknum);
+	PRINT_DEBUG("banknum %u", banknum);
 	_ramSpace[banknum][addr] = val;
 	if (_ramSize < 0x2000)
 	{
@@ -224,43 +254,53 @@ unsigned char	mbc1::_rombankRead(unsigned short addr)
 
 unsigned char	mbc1::_rambankRead(unsigned short addr)
 {
-//	printf("we in here?\n");
+//	PRINT_DEBUG("we in here?");
 	unsigned char banknum = 0;
 	if ((_ramg & 0x0F) != 0x0A)
 		return (0xFF);
 	if (_ramSize > 0x2000)
 		banknum = _mode ? _bank2 : 0;
-//	printf("banknum 0x%02hhx\n", banknum);
+//	PRINT_DEBUG("banknum 0x%02hhx", banknum);
 	return (_ramSpace[banknum][addr]);
 }
 
 unsigned char	mbc1::readFrom(unsigned short addr)
 {
-//	printf("we in here 0x%04x\n", addr);
-	if (0x0000 <= addr && addr <= 0x7FFF)
+//	PRINT_DEBUG("we in here 0x%04x", addr);
+	if (addr <= 0x7FFF)
 		return(_rombankRead(addr));
 	else if (0xA000 <= addr && addr <= 0xBFFF)
 		return (_rambankRead(addr - 0xA000));
 	return 0xFF;
 }
 
-mbc2::mbc2(unsigned romBanks, unsigned ramBanks, FILE *rom)
+unsigned char	mbc1::getBank(unsigned short addr)
 {
+	if (addr < 0x4000)
+		return 0;
+	else
+		return _bank1 | (!_mode ? (_bank2 << 5) : 0);
+}
+
+mbc2::mbc2(unsigned romBanks, unsigned ramBanks, FILE *rom)
+{ //MBC2 chips have a consistent fixed number of ram banks, this variable is only here for ease of mutability
+	(void)ramBanks;
 	printf("MBC2\n");
 	_romSpace.resize(romBanks ? romBanks : 2);
 	_ramSize = 0x200;
 	for (unsigned i = 0x00; i < romBanks; i++)
-		fread(&_romSpace[i][0], 1, 0x4000, rom);
+		fread(&_romSpace[i][0x00], 1, 0x4000, rom);
 	fclose(rom);
+	_ramg = 0;
 	_romg = 1;
 //	for (unsigned i = 0x00; i < romBanks; i++)
 //		for (unsigned j = 0x00; j < 0x4000; j++)
-//			printf("%c", _romSpace[i][j]);
+//			PRINT_DEBUG("%c", _romSpace[i][j]);
 }
 
 void	mbc2::writeTo(unsigned short addr, unsigned char val)
 {
-	if (0x0000 <= addr && addr <= 0x3FFF)
+	if (addr <= 0x3FFF)
 	{
 		if ((0x0F00 & addr) == 0x0100)
 			_ramg = val;
@@ -273,7 +313,7 @@ void	mbc2::writeTo(unsigned short addr, unsigned char val)
 
 unsigned char	mbc2::readFrom(unsigned short addr)
 {
-	if (0x0000 <= addr && addr <= 0x7FFF)
+	if (addr <= 0x7FFF)
 		_rombankRead(addr);
 	else if (0xA000 <= addr && addr <= 0xBFFF)
 		_ramRead(addr - 0xA000);
@@ -295,7 +335,7 @@ void	mbc2::_ramWrite(unsigned short addr, unsigned char val)
 
 unsigned char	mbc2::_rombankRead(unsigned short addr)
 {
-	if (0x0000 <= addr && addr <= 0x3FFF)
+	if (addr <= 0x3FFF)
 		return (_romSpace[0x00][addr]);
 	return (_romSpace[_romg][addr - 0x4000]);
 }
@@ -308,20 +348,35 @@ unsigned char	mbc2::_ramRead(unsigned short addr)
 		return (_ramSpace[0x00][addr]);
 }
 
+unsigned char mbc2::getBank(unsigned short addr)
+{
+	if (addr < 0x4000)
+		return 0;
+	return _romg;
+}
+
 mbc3::mbc3(unsigned romBanks, unsigned ramBanks, FILE *rom)
 {
-	printf("MBC3\n");
+	PRINT_DEBUG("MBC3");
 	_romSpace.resize(romBanks ? romBanks : romBanks + 2);
 	_ramSpace.resize(ramBanks);
+	_ramg = 0;
+	_rombank = 1;
+	_rambank = 0;
 	_timeLatch = 0xFF;
+	_rtcS = 0;
+	_rtcM = 0;
+	_rtcH = 0;
+	_rtcDL = 0;
+	_rtcDH = 0;
 	for (unsigned i = 0x00; i < romBanks; i++)
-		fread(&_romSpace[i][0], 1, 0x4000, rom);
+		fread(&_romSpace[i][0x00], 1, 0x4000, rom);
 	fclose(rom);
 }
 
 void			mbc3::writeTo(unsigned short addr, unsigned char val)
 {
-	if (0x0000 <= addr && addr <= 0x1FFF)
+	if (addr <= 0x1FFF)
 		_ramg = val;
 	else if (0x2000 <= addr && addr <= 0x3FFF)
 		_rombank = val & 0x7F ? val : 1;
@@ -402,27 +457,40 @@ unsigned char	mbc3::_rambankRead(unsigned short addr)
 
 unsigned char	mbc3::readFrom(unsigned short addr)
 {
-	if (0x0000 <= addr && addr <= 0x7FFF)
+	if (addr <= 0x7FFF)
 		return(_rombankRead(addr));
 	else if (0xA000 <= addr && addr <= 0xBFFF)
 		return (_rambankRead(addr - 0xA000));
 	return 0xFF;
 }
 
+unsigned char	mbc3::getBank(unsigned short addr)
+{
+	(void)addr; //verify that I am properly accessing banks in different places
+				//and that this is only here for easy of mutability
+	return _rombank;
+}
+
 mbc5::mbc5(unsigned romBanks, unsigned ramBanks, FILE *rom)
 {
-	printf("MBC5\n");
+	PRINT_DEBUG("MBC5");
 	_romSpace.resize(romBanks ? romBanks : 2);
 	_ramSpace.resize(ramBanks);
 	for (unsigned i = 0x00; i < romBanks; i++)
-		fread(&_romSpace[i][0], 1, 0x4000, rom);
+		fread(&_romSpace[i][0x00], 1, 0x4000, rom);
+	_ramg = 0;
+	_bank1 = 0;
+	_bank2 = 0;
+	_rambank = 0;
 	fclose(rom);
 }
 
+#include <stdlib.h>
 void			mbc5::writeTo(unsigned short addr, unsigned char val)
 {
-	if (0x0000 <= addr && addr <= 0x1FFF)
-		_ramg = val & 0x0F;
+	if (addr <= 0x1FFF)
+//		_ramg = val & 0x0F;
+		_ramg = val;
 	else if (0x2000 <= addr && addr <= 0x2FFF)
 		_bank1 = val;
 	else if (0x3000 <= addr && addr <= 0x3FFF)
@@ -440,6 +508,7 @@ void		mbc5::_ramWrite(unsigned short addr, unsigned char val)
 	unsigned char banknum = 0;
 	if (_ramSize > 0x2000)
 		banknum = _rambank;
+	PRINT_DEBUG("ram bank %u", _rambank);
 	_ramSpace[banknum][addr] = val;
 	if (_ramSize < 0x2000)
 	{
@@ -466,7 +535,8 @@ unsigned char	mbc5::_rombankRead(unsigned short addr)
 unsigned char	mbc5::_rambankRead(unsigned short addr)
 {
 	unsigned char banknum = 0;
-	if ((_ramg & 0x0F) != 0x0A)
+//	if ((_ramg & 0x0F) != 0x0A)
+	if (_ramg != 0x0A)
 		return (0xFF);
 	if (_ramSize > 0x2000)
 		banknum = _rambank;
@@ -475,9 +545,15 @@ unsigned char	mbc5::_rambankRead(unsigned short addr)
 
 unsigned char	mbc5::readFrom(unsigned short addr)
 {
-	if (0x0000 <= addr && addr <= 0x7FFF)
+	if (addr <= 0x7FFF)
 		return(_rombankRead(addr));
 	else if (0xA000 <= addr && addr <= 0xBFFF)
 		return (_rambankRead(addr - 0xA000));
 	return 0xFF;
+}
+
+unsigned char	mbc5::getBank(unsigned short addr)
+{
+	(void)addr; //similar to mbc3
+	return _bank1 | (_bank2 ? 0x0100 : 0x0000);
 }

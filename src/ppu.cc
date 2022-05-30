@@ -1,502 +1,486 @@
+#include "print_debug.hpp"
 #include "ppu.hpp"
-#include <unistd.h>
+#define LCDC 0xFF40
+#define STAT 0xFF41
+#define SCY 0xFF42
+#define SCX 0xFF43
+#define LY 0xFF44
+#define BGP 0xFF47
+#define OBP0 0xFF48
+#define OBP1 0xFF49
+#define WY 0xFF4A
+#define WX 0xFF4B
 
-//vertical refresh ever 70224 clocks (140448 in GBC
-//double speed mode): 59,7275 Hz
-//
-//A scanline normally takes 456 clocks (912 clocks in double
-//speed mode) to complete. A scanline
-//starts in mode 2, then goes to mode 3 and, when the LCD
-//controller has finished drawing the line
-//(the timings depend on lots of things) it goes to mode 0.
-//During lines 144-153 the LCD controller is
-//in mode 1. Line 153 takes only a few clocks to complete
-//(the exact timings are below). The rest ofthe clocks of
-//line 153 are spent in line 0 in mode 1!
+#define SPRITE_Y 0
+#define SPRITE_X 1
+#define SPRITE_T 2
+#define SPRITE_A 3
 
-ppu::ppu(std::shared_ptr<mmu> unit) : _mmu(unit)
+#define SP_PAL (spriteattr[spriteindex][SPRITE_A] & 16)
+#define SP_XFLIP (spriteattr[spriteindex][SPRITE_A] & 32)
+#define SP_YFLIP (spriteattr[spriteindex][SPRITE_A] & 64)
+#define SP_PRIO	(spriteattr[spriteindex][SPRITE_A] & 128)
+
+#define BGW_ON (lcdc & 1)
+#define SPRITE_ON (lcdc & 2)
+#define SPRITE_S (lcdc & 4)
+#define BG_MAP (lcdc & 8)
+#define TDAT (lcdc & 16)
+#define WIN_ON (lcdc & 32)
+#define WIN_MAP (lcdc & 64)
+#define LCD_ON (lcdc & 128)
+
+//_oncyc is used as a delay because any time the LCD gets enabled
+//it takes a whole frame before it starts drawing pixels.
+//ctab is the colourtab used to generate the pallets.
+//_dclk delays the LCD clock by however many cycles.
+//_sclk is a separate delay used by the sprite handling logic
+//to delay the LCD clock. I'd like to combine them again but I need
+//to nail down the logic perfectly first.
+ppu::ppu(std::shared_ptr<mmu> mem, unsigned char type) : _mmu(mem)
 {
-	_y = 255;
-	_mmu->writeTo(0xFF44, 0);
-	_sx = _mmu->PaccessAt(0xFF43);
-	_sy = _mmu->PaccessAt(0xFF42);
-	_wx = _mmu->PaccessAt(0xFF4B);
-	_wy = _mmu->PaccessAt(0xFF4A);
-	LCDC = _mmu->PaccessAt(0xFF40);
-	STAT = _mmu->PaccessAt(0xFF41);
-	_cycles = 70224;
-	_off = 1;
-	_modenxt = 2;
-	unsigned i = 0;
-	while (i < 23040)
-		pixels[i++] = 0xFFFFFF;
-	i = 3;
-//	while (i < 92160)
-//	{
-//		if (pixels[i] != 255)
-//		{
-//			printf("bad pixel opacity\n");
-//			exit(1);
-//		}
-//		i+=4;
-//	}
-}
-
-//HBL mode 0
-//VBL mode 1 (LY=144)
-//mode 2 OAM access
-//mode 3 data transfer
-
-//0 white 1 light gray 2 dark grey 3 black
-
-unsigned ctab[] = {
-	0x00FFFFFF, 0x00AAAAAA, 0x00555555, 0x00000000};
-//The window is an alternate background that can be displayed
-//over the normal background. This
-//window is drawn by resetting the LCD background state
-//machine and changing to the window map.
-//This results in only being able to show the upper left
-//part of the window map (and no wrapping,
-//logically). Priorities between window and sprites are
-//shared with normal background.
-//The behaviour of this registers is a bit strange
-//8.16.1. Window Display Depending on WX and WY
-//The window is visible (if enabled) when WX=7-166, WY=0-143.
-//A position of WX=7, WY=0
-//locates the window at upper left corner of the screen,
-//covering normal background. Other values for
-//WX will give strange results:
-
-//Each sprite usually pauses for 11 - min(5, (x + SCX) mod 8)
-//dots. Because sprite fetch waits for background fetch to
-//finish, a sprite's cost depends on its position relative to
-//the left side of the background tile under it. It's greater
-//if a sprite is directly aligned over the background tile,
-//less if the sprite is to the right. If the sprite's left
-//side is over the window, use 255 - WX for SCX in this
-//formula
-
-void	ppu::VBlank()
-{
-	_cycles += 456;
-	unsigned char IF = _mmu->accessAt(0xFF0F);
-	_mmu->writeTo(0xFF0F, IF | 0x01);
-}
-
-void	ppu::printSprite(unsigned char sprite[16], unsigned char attr[4], unsigned char lcdc)
-{
-	if (attr[1] >= 160)
-		return ;
-	unsigned char obp = attr[3] & (1 << 4) ? _mmu->PaccessAt(0xFF49) : _mmu->PaccessAt(0xFF48);
-	unsigned obpt[] = {
-		0x000000, ctab[(obp >> 2) & 3],
-		ctab[(obp >> 4) & 3], ctab[(obp >> 6)]};
-	unsigned char lower;
-	unsigned char upper;
-	unsigned char bgp = _mmu->PaccessAt(0xFF47);
-	if (!(attr[3] & (1 << 6)))
-	{
-		lower = sprite[2 * (_y - attr[0])];
-		upper = sprite[(2 * (_y - attr[0])) + 1];
-	}
-	else
-	{
-		lower = sprite[15 - (2 *(_y - attr[0]))];
-		upper = sprite[14 - (2 * (_y - attr[0]))];
-	}
-	unsigned char i = -1;
-	unsigned char c;
-	if (!(attr[3] & (1 << 5)))
-		while (++i < 8)
-		{
-			c = ((lower >> (7 - i)) & 1) | (((upper >> (7 - i)) & 1) << 1);
-			if (!c || attr[i] + i > 160)
-				continue ;
-			if (!(attr[3] & (1 << 7)) || pixels[(_y * 160) + attr[1] + i] == ctab[bgp & 0x03])
-				pixels[(_y * 160) + attr[1] + i] = obpt[c];
-		}
-	else
-		while (++i < 8)
-		{
-			c = ((lower >> i) & 1) | (((upper >> i) & 1) << 1);
-			if (!c || attr[i] + i > 160)
-				continue ;
-			if (!(attr[3] & (1 << 7)) || pixels[(_y * 160) + attr[1] + i] == ctab[bgp & 0x03])
-				pixels[(_y * 160) + attr[1] + i] = obpt[c];
-		}
-}
-
-void	ppu::printSprites16(unsigned char lcdc)
-{
-	unsigned char i = spritecount;
-	unsigned short addr = 0x8000;
-	unsigned char sprite[16];
-	unsigned char byte;
-	while (i-- > 0)
-	{
-		byte = 0;
-		while (byte < 16)
-		{
-			if ((_y - spriteattr[i][0]) < 8)
-				sprite[byte] = _mmu->PaccessAt(addr + byte + ((spriteattr[i][2] & 0xFE) * 16));
-			else
-				sprite[byte] = _mmu->PaccessAt(addr + byte + ((spriteattr[i][2] | 0x01) * 16));
-			byte++;
-		}
-		printSprite(sprite, spriteattr[i], lcdc);
-	}
-}
-
-void	ppu::printSprites8(unsigned char lcdc)
-{
-	unsigned char i = spritecount;
-	unsigned short addr = 0x8000;
-	unsigned char sprite[16];
-	unsigned char byte;
-	while (i-- > 0)
-	{
-		byte = 0;
-		while (byte < 16)
-		{
-			sprite[byte] = _mmu->PaccessAt(addr + byte + (spriteattr[i][2] * 16));
-			byte++;
-		}
-		printSprite(sprite, spriteattr[i], lcdc);
-	}
-}
-
-void	ppu::readOAM(unsigned char lcdc)
-{
-	unsigned short	addr = 0xFE00;
+	for (unsigned i = 0; i < 23040; i++)
+		pixels[i] = 0x00FFFFFF;
+	_x = 0;
+	_y = 0;
 	spritecount = 0;
-	unsigned char	ssize = (lcdc >> 2) & 1 ? 16 : 8;
-	while (addr < 0xFE9F && spritecount < 10)
+	_cycles = 0;
+	_oncyc = 70224;
+	_dclk = 6;
+	_sclk = 0;
+	ctab[0] = 0x00FFFFFF;
+	ctab[1] = 0x00AAAAAA;
+	ctab[2] = 0x00555555;
+	ctab[3] = 0x00000000;
+	bwtile.setSize(8);
+	sptile.setSize(8);
+	(void)type;
+	//TODO: factory method to generate different ppus
+}
+
+//for each 4 cycles of the CPU, the PPU does 2 things. Hence
+//_cycle accepting a boolean argument. It makes it easier that way
+
+void	ppu::cycle()
+{
+	if (_mmu->_oamtime)
+		_mmu->dmaTransfer();
+	_cycle(true);
+}
+
+//offcheck is define in the header file. It makes sure the LCD is enabled
+//and handles the 1 frame delay before drawing happens.
+
+void	ppu::_cycle(bool repeat)
+{
+//	printf("doop\n");
+	if (offcheck(2))
 	{
-		spriteattr[spritecount][0] = _mmu->PaccessAt(addr);
-		if (0 < spriteattr[spritecount][0] && spriteattr[spritecount][0] <= 160)
+		if (repeat == true)
+			_cycle(false);
+		return;
+	}
+//	PRINT_DEBUG("ppu %u cycles: %u", _mmu->PaccessAt(STAT) & 3, _cycles);
+
+//	In mode 2 the PPU scans OAM to find sprites that appear on the current
+//	scanline. It can only display up to 10 sprites on any given line so checks
+//	are in place. Sprites can be 8x8 or 8x16 pixels as determined by a bit
+//	in the LCDC register. cstate is used here to keep track of where we are in OAM memory.
+//	It gets multiplied by 4 cuz each sprite has 4 bytes associated with it.
+//	SPRITE_Y is the scanline its first line appears on + 16. SPRITE_X is the place in
+//	the current scanline it starts being drawn + 8. SPRITE_T is the tile number that the
+//	sprite uses. SPRITE_A is a set of flags that determine the attributes of the sprite.
+	if ((_mmu->PaccessAt(STAT) & 0x03) == 0x02)
+	{
+		if (spritecount < 10)
 		{
-			spriteattr[spritecount][0] -= 16;
-			//because of the way I handled hblanking I need to
-			//compare against _y + 1 for this function so it
-			//will be on the correct scanline when it prints
-			//the sprite
-			if (spriteattr[spritecount][0] <= (_y + 1) && (_y + 1) < spriteattr[spritecount][0] + ssize)
+			unsigned short addr = (0xFE00 + (cstate++ * 4));
+			unsigned char y = _mmu->PaccessAt(addr);
+			unsigned char ssize = (_mmu->PaccessAt(LCDC) & (1 << 2)) ? 16 : 8;
+//			PRINT_DEBUG("ssize %u 0 < %u && %u < 160 && %u <= %u && %u <= %u", ssize, y, y, y, _y + 16, _y + 16, y + ssize);
+			if (0 < y && y < 160 && y <= _y + 16 && _y + 16 <=y + ssize)
 			{
-				spriteattr[spritecount][1] = _mmu->PaccessAt(addr + 1) - 8;
-				spriteattr[spritecount][2] = _mmu->PaccessAt(addr + 2);
-				spriteattr[spritecount][3] = _mmu->PaccessAt(addr + 3);
+//				PRINT_DEBUG("yes");
+				spriteattr[spritecount][SPRITE_Y] = y;
+				spriteattr[spritecount][SPRITE_X] = _mmu->PaccessAt(addr + 1);
+				spriteattr[spritecount][SPRITE_T] = _mmu->PaccessAt(addr + 2);
+				spriteattr[spritecount][SPRITE_A] = _mmu->PaccessAt(addr + 3);
 				spritecount++;
+//				PRINT_DEBUG("x %u y %u t %u", spriteattr[spritecount][SPRITE_X], spriteattr[spritecount][SPRITE_Y], spriteattr[spritecount][SPRITE_T]);
 			}
 		}
-		addr += 4;
-	}
-}
-
-void	ppu::readSprites(unsigned char lcdc)
-{
-	_pause = 0;
-	if (lcdc & (1 << 6))
-	{
-		for (unsigned char d = 0; d < spritecount; d++)
-			if ((spriteattr[d][1] + 8) > (_wx - 7) && (spriteattr[d][0] + 8) > _wy)
-				_pause += (11 - (5 > ((spriteattr[d][1] + (255 - _wx))% 8) ? ((spriteattr[d][1] + (255 - _wx)) % 8) : 5));
-	}
-	else
-		for (unsigned char d = 0; d < spritecount; d++)
-			_pause += (11 - (5 > ((spriteattr[d][1] + _sx)% 8) ? ((spriteattr[d][1] + _sx) % 8) : 5));
-	lcdc & (1 << 2) ? printSprites16(lcdc) : printSprites8(lcdc);
-}
-//turning on window adds delay of 6
-//y / 8 for current line's tiles
-//consider placing this in mmu
-//possible optimization, vram writes could calculate the new
-//byte val as they get written
-void	ppu::refreshTiles()
-{
-	unsigned short mapaddr;
-	unsigned tile = 0;
-	unsigned char line;
-	unsigned char pix;
-	mapaddr = 0x8000;
-	while (mapaddr < 0x97FF)//since mapaddr increments several times between each check this condition is fine
-	{
-		for (line = 0; line < 8; line++)//tiles are 2 bytes per line
+		if (cstate == 40)
 		{
-			unsigned char lower = _mmu->accessAt(mapaddr++);
-			unsigned char upper = _mmu->accessAt(mapaddr++);
-			unsigned char i = 8;
-			pix = 0;
-			while (i--)
-			{
-				tiles[tile][line][pix++] = (((lower >> i) & 1) + (((upper >> i) & 1) << 1));
-			}
-		}
-		tile++;
-	}
-	_mmu->vramWrite = false;
-}
-
-void	ppu::getTiles9(unsigned short addr, unsigned char x, unsigned char y, unsigned char dis)
-{
-	char	tab[32];
-	for (int i = 0; i < 32; i++)
-		tab[i] = _mmu->accessAt(addr++);
-	unsigned char bgp = _mmu->PaccessAt(0xFF47);
-	unsigned bgc[] = {
-		ctab[bgp & 3], ctab[(bgp >> 2) & 3],
-		ctab[(bgp >> 4) & 3], ctab[(bgp >> 6)]};
-	//theoretically my xscroll plus the current pixel over 8
-	//should be which tile in the tab I'm looking at.
-	//Because it's a signed value using 0x9000 addressing,
-	//I'm looking at tile banks 1 and 2 (not bank 0), thus
-	//the value tab returns plus 256 should give me the actual
-	//tile I'm after. _y mod 8 should give me the line number
-	//I'm looking for.
-	unsigned char pix = 0;
-	while (pix + dis < 160)
-	{
-		for (unsigned char tpix = 0; tpix < 8; tpix++)
-			pixels[pix + dis + tpix + (_y * 160)] = bgc[tiles[256 + tab[(pix + tpix + x)/8]][y % 8][tpix]];
-		pix += 8;
-	}
-}
-
-//factor in window drawing
-//do a background draw if background is enabled, then
-//window draw if window is enabled
-//change this to use unsigned ints as the pallet data
-void	ppu::getTiles8(unsigned short addr, unsigned char x, unsigned char y, unsigned char dis)
-{
-	unsigned char tab[32];
-	for (int i = 0; i < 32; i++)
-		tab[i] = _mmu->accessAt(addr++);
-	addr -= 32;
-	unsigned char bgp = _mmu->PaccessAt(0xFF47);
-	unsigned bgc[] = {
-		ctab[bgp & 3], ctab[(bgp >> 2) & 3],
-		ctab[(bgp >> 4) & 3], ctab[(bgp >> 6)]};
-	//theoretically my xscroll plus the current pixel over 32
-	//should be which tile in the tab I'm looking at. that
-	//tile is the index for my overall tiles table. _y mod 8
-	//should give me the line number I'm looking for.
-	unsigned char pix = 0;
-	while (pix + dis < 160)
-	{
-		for (unsigned char tpix = 0; tpix < 8; tpix++)
-		{
-			pixels[pix + dis + tpix + (_y * 160)] = bgc[tiles[tab[(pix + tpix + x)/8]][y % 8][tpix]];
-		}
-		pix += 8;
-	}
-}
-
-void	ppu::vdump(unsigned short address)
-{
-	unsigned pix[65025];
-	SDL_Window *win;
-	SDL_Surface *screen;
-	SDL_Texture *frame;
-	SDL_Renderer *renderer;
-	win = SDL_CreateWindow("vram", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 255, 255, SDL_WINDOW_SHOWN);
-	screen = SDL_GetWindowSurface(win);
-	renderer = SDL_CreateRenderer(win, -1, SDL_RENDERER_ACCELERATED);
-	frame = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_RGBA32, SDL_TEXTUREACCESS_STREAMING, 255, 255);
-	SDL_Event e;
-	unsigned char bgp = _mmu->PaccessAt(0xFF47);
-	unsigned bgc[] = {
-		ctab[bgp & 3], ctab[(bgp >> 2) & 3],
-		ctab[(bgp >> 4) & 3], ctab[(bgp >> 6)]};
-	unsigned short addr = 0;
-	unsigned short x = 0;
-	unsigned short y = 0;
-	unsigned char tilenum;
-	while (addr < 1024)
-	{
-		while (y < 255)
-		{
-			while (x < 255)
-			{
-				tilenum = _mmu->PaccessAt(address + addr++);
-				for (unsigned char ty = 0; ty < 8; ty++)
-					for (unsigned char tx = 0; tx < 8; tx++)
-					{
-						pix[(x + tx) * (y + ty)] = bgc[tiles[tilenum][ty][tx]];
-					}
-				x += 8;
-			}
-			y += 8;
+//			if (spritecount)
+//				PRINT_DEBUG("line %u sprites %u", _y, spritecount);
+			_mmu->STATupdate(0x03);
+//			PRINT_DEBUG("Mode 3");
+			cstate = 4;
+			ctile = 0;
 		}
 	}
-	SDL_UpdateTexture(frame, NULL, pix, (255 * 4));
-	SDL_RenderCopy(renderer, frame, NULL, NULL);
-	SDL_RenderPresent(renderer);
-	bool viewing = true;
-	while (viewing == true)
+	//each scanline is 160 pixels long. If I'm at 160 I know I need to HBLANK
+	else if ((_mmu->PaccessAt(STAT) & 0x03) == 0x03)
 	{
-		SDL_PollEvent(&e);
-		if (e.key.keysym.sym == SDLK_ESCAPE)
-			viewing = false;
+		if (_x == 160)
+		{
+			spritecount = 0;
+			_dclk = 6;
+			_mmu->STATupdate(0x00);
+			bwtile.flush();
+//			PRINT_DEBUG("HBlank");
+		}
+		else
+			drawpix();
 	}
-	SDL_DestroyRenderer(renderer);
-	SDL_DestroyWindow(win);
+	//allows for the scanline number to increment during VBLANK. Even though the resolution is
+	//160x144, the processor still tracks another 10 extra blank lines as VBLANK occurs.
+	else if (_cycles >= 456)
+	{
+		_cycles -= 456;
+		_y = _y + 1;
+		palletcalc();
+		if (_y < 144 || _y == 154)
+		{
+			if (_y == 154)
+				_y = 0;
+//			PRINT_DEBUG("Mode 2");
+			cstate = 0;
+			_mmu->STATupdate(0x02);
+		}
+		_x = 0;
+		_mmu->writeTo(LY, _y);
+	}
+	_cycles += 2;
+	if (repeat)
+		_cycle(false);
 }
-/*
-void	ppu::readTiles(unsigned char lcdc)
-{
-	unsigned short mapaddr;
-	if (_mmu->vramWrite == true)
-		refreshTiles();
-	if (lcdc & (1 << 5))
-		mapaddr = STAT & (1 << 6) ? 0x9C00 : 0x9800;
-	else
-		mapaddr = STAT & (1 << 3) ? 0x9C00 : 0x9800;
-	unsigned char y;
-	unsigned char x;
-	unsigned char dis = 0;
-	if (lcdc & (1 << 6))
-	{
-		y = _wy;
-		x = _wx;
-		dis = _wx;
-	}
-	else
-	{
-		y = _sy;
-		x = _sx;
-	}
-	y += _y;
-	mapaddr += (unsigned short)((y >> 3) * 32);
-	lcdc & (1 << 4) ? getTiles8(mapaddr, x, y, dis) : getTiles9(mapaddr, x, y, dis);
-}*/
 
-void	ppu::readTiles(unsigned char lcdc)
+// Uses cstate to keep track of which type of memory access
+// is occurring. The first time through its access cycle on
+// any given scanline it reads the number of the current
+// tile, then it gets the first byte that generates pixels
+// for the current line, then the second byte. It then
+// completely disregards this and, starting from the first
+// tile, goes through the cycle described above, then has
+// a 2 cycle window where sprite information can be accessed
+// (which has its own associated delays which would get
+// inserted at this point in the cycle).
+// For more detailed info, consult the article I have linked
+// in the README about the nitty gritty details as well as
+// the reddit post linked in the README that details how
+// sprite timing works.
+
+void	ppu::drawpix()
 {
-	unsigned short mapaddr;
-	if (_mmu->vramWrite == true)
-		refreshTiles();
-//	if (lcdc & (1 << 5))
-//		mapaddr = STAT & (1 << 6) ? 0x9C00 : 0x9800;
-//	else
-	mapaddr = (STAT & (1 << 3)) ? 0x9C00 : 0x9800;
-	unsigned char y;
-	unsigned char x;
-	unsigned char dis = 0;
-//	if (lcdc & (1 << 6))
-//	{
-//		y = _wy;
-//		x = _wx;
-//		dis = _wx;
-//	}
-//	else
-//	{
-		y = _sy;
-		x = _sx;
-//	}
-	y += _y;
-	mapaddr += (unsigned short)((y >> 3) * 32);
-	(lcdc & (1 << 4)) ? getTiles8(mapaddr, x, y, dis) : getTiles9(mapaddr, x, y, dis);
-	if (!(lcdc & 1 << 5))
+	sx = _mmu->PaccessAt(SCX);
+	sy = _mmu->PaccessAt(SCY);
+	wx = _mmu->PaccessAt(WX);
+	wy = _mmu->PaccessAt(WY);
+	lcdc = _mmu->PaccessAt(LCDC);
+	if (_sclk > 1)
+	{
+		_spritebranch();
 		return ;
-	mapaddr = (STAT & (1 << 6)) ? 0x9C00 : 0x9800;
-	y = (_y - _wy);
-	x = _wx;
-	dis = _wx;
-	mapaddr += (unsigned short)((y >> 3) * 32);
-	(lcdc & (1 << 4)) ? getTiles8(mapaddr, x, y, dis) : getTiles9(mapaddr, x, y, dis);
-}
-
-void	ppu::renderLine(unsigned char lcdc)
-{
-	_sx = _mmu->PaccessAt(0xFF43);
-	_sy = _mmu->PaccessAt(0xFF42);
-	_wx = _mmu->PaccessAt(0xFF4B);
-	_wy = _mmu->PaccessAt(0xFF4A);
-//	if (lcdc & (1 << 5)) //since this pauses the actual sys clock I might be able to get away with just not doing it
-//		_pause = 6;
-	if (lcdc & 1) //works different for cgb
-		readTiles(lcdc);
-	if (lcdc & 2 && spritecount)
-		readSprites(lcdc);
-}
-
-// 173.5 + (xscroll % 8)
-//entire frame is 70224 cycles
-//each line is 456 cycles
-//cycles through modes 2, 3, 0 once per line
-//0 is off screen for sprites
-//either have hblank print all at once or
-//have pixel draw function that runs each cycle
-//skip the first frame
-int		ppu::frameRender(unsigned char cyc)
-{
-	unsigned char	lcdc = _mmu->PaccessAt(0xFF40);
-	unsigned char	mode = _mmu->PaccessAt(0xFF41);
-	_cycles = cyc - _cycles;
-  	unsigned char y = _mmu->PaccessAt(0xFF44);
-//	unsigned char currmode = mode & 0x03;
-	mode &= ~(0x03);
-	mode |= _modenxt;
-	unsigned i = 0;
-//	switch(currmode)
-	switch(_modenxt)
+	}
+	_drawpix(true);
+	switch (cstate)
 	{
-		case 0://move to mode 1/2
-			if (_y < 144)
-				y++;
-	  		if (y == 144)
-			{
-				_y = 144;
-				VBlank();
-				_modenxt = 1;
-				_mmu->writeTo(0xFF44, y);
-				return 1;
-			}
-			_modenxt = 2;
-			_mmu->writeTo(0xFF44, y);
-			readOAM(lcdc);
-			_cycles += 80;
+		case 0:
+			gettnum();
+//			PRINT_DEBUG("tnum ctile %u", ctile);
+			cstate++;
 			break;
-		case 1://move to mode 2
-			if (_y <= 153)
+		case 1:
+			getbyte();
+//			PRINT_DEBUG("byte1");
+			cstate++;
+			break;
+		case 2:
+			getbyte();
+//			PRINT_DEBUG("byte2");
+			ctile++;
+			if (!_x && !iswin)
 			{
-				_cycles = cyc - _cycles;
-				_cycles += 456;
-				_y++;
-				_modenxt = 1;
-				_mmu->writeTo(0xFF44, (_y == 154) ? 0 : _y);
+				try{genBuf(bwtile);}
+				catch (const char *e)
+				{PRINT_DEBUG("BG %s", e);}
+				cstate = 0;
 			}
 			else
-			{
-				_modenxt = 2;
-				readOAM(lcdc);
-				_cycles += 80;
-			}
+				cstate++;
 			break;
-		case 2://move to mode 3
-			_modenxt = 3;
-			if (y != _y || (lcdc & 1 << 5 && !(LCDC & 1 << 5)))
-			{
-				_y = y;
-				renderLine(lcdc);
-			}
-			_hblank = 208 - _pause;
-			_cycles += 168; //168 - 291 depending on sprite count
+		case 3:
+//			PRINT_DEBUG("tgen");
+			try{genBuf(bwtile);}
+			catch (const char *e)
+			{PRINT_DEBUG("BG %s", e);}
+			spritecheck();
 			break;
-		case 3://moving to mode 0
-//			printf("mode 0 hblank\n");
-			_cycles += _hblank; //85 - 208 depending on mode 3 time
-			_modenxt = 0;
+		case 4:
+			_dclk = _dclk + (sx % 8);
+			gettnum();
+			cstate = 1;
 			break;
-//		}
-//		auto stop = std::chrono::high_resolution_clock::now();
-//		auto dur = std::chrono::duration_cast<std::chrono::microseconds>(stop-start);
-//		std::cout << "graphics switch: " << dur.count() << std::endl;
 	}
-//	_mmu->writeTo(0xFF41, mode & 0x03);
-	_mmu->STATupdate(mode);
-	LCDC = lcdc;
-	STAT = mode;
+}
+
+void	ppu::_spritebranch()
+{
+	if (_sclk > 1)
+		_sclk -= 2;
+	switch (cstate)
+	{
+		case 1:
+//			PRINT_DEBUG("spbyte1");
+			getsprite();
+			cstate++;
+			break;
+		case 2:
+//			PRINT_DEBUG("spbyte2");
+			getsprite();
+			cstate = (_sclk > 1) ? 3 : 0;
+			break;
+		case 3:
+			cstate = (_sclk > 1) ? 3 : 0;
+//			PRINT_DEBUG("spstall %u", cstate);
+			break;
+	}
+}
+
+void	ppu::_drawpix(bool repeat)
+{
+	unsigned char pix = 0;
+	unsigned char spix = 0;
+//	pix = bwtile.getPix();
+	try {pix = bwtile.getPix();}
+	catch (const char *e)
+	{PRINT_DEBUG("BG %s", e);}
+	if (_dclk)
+	{
+		_dclk--;
+		if (repeat == true)
+			_drawpix(false);
+		return ;
+	}
+	if (_x == 160)
+		return ;
+//	unsigned char ex = (_x + sx) % 8;
+	if ((_y * 160) + _x > 23040)
+		PRINT_DEBUG("bad pix at %u %u", _x, _y);
+//	unsigned char i = sprite ? _x - (spriteattr[spriteindex][SPRITE_X] - 8) : 0;
+	if (sprite == true)
+	{
+//		PRINT_DEBUG("_x %u sx %u", _x, sx);
+//		PRINT_DEBUG("lcdc & 2 %u sptile[%u] %u (!spriteattr & 1<<7 %u || !bwtile %u || !lcdc & 1 %u) %u", SPRITE_ON, i, sptile[i], SP_PRIO, bwtile[_x / 8][ex], BGW_ON, (!SP_PRIO || !bwtile[_x / 8][ex] || !BGW_ON));
+//		spix = sptile.getPix();
+		try {spix = sptile.getPix();}
+		catch (const char *e)
+		{PRINT_DEBUG("Sprite %s", e);}
+//		PRINT_DEBUG("lcdc & 2 %u spix %u (!spriteattr & 1<<7 %u || !bwtile %u || !lcdc & 1 %u) %u", SPRITE_ON, spix, SP_PRIO, pix, BGW_ON, (!SP_PRIO || !pix || !BGW_ON));
+	}
+//	if (sprite == true && SPRITE_ON && sptile[i] && (!SP_PRIO || !bwtile[_x / 8][ex] || !BGW_ON))
+	if (sprite == true && SPRITE_ON && spix && (!SP_PRIO || !pix || !BGW_ON))
+	{
+//		PRINT_DEBUG("_x %u sx %u", _x, sx);
+//		pixels[(_y * 160) + _x] = SP_PAL ? obp1[sptile[i]] : obp0[sptile[i]];
+		pixels[(_y * 160) + _x] = SP_PAL ? obp1[spix] : obp0[spix];
+	}
+	else if (BGW_ON)
+//		pixels[(_y * 160) + _x] = bgp[bwtile[_x / 8][ex]];
+		pixels[(_y * 160) + _x] = bgp[pix];
+	else
+		pixels[(_y * 160) + _x] = 0x00FFFFFF;
+	_x++;
+	if (sptile[0] == 0xFF || _x == 160)
+	{
+		sprite = false;
+		sptile.flush();
+	}
+	if (repeat == true)
+		_drawpix(false);
+}
+
+void	ppu::gettnum()
+{
+	unsigned short map;
+	unsigned char ex = _dclk ? _x : _x + 8;
+	if (WIN_ON && _y >= wy && ex >= (wx - 7))
+	{
+		map = WIN_MAP ? 0x9C00 : 0x9800;
+		tilenum = _mmu->PaccessAt(map + ((((_y - wy) / 8) * 32) + (((ex - wx - 7) / 8))));
+		iswin = true;
+		if (wx == ex && !_dclk)
+			_dclk = 6 + (wx % 8);
+		PRINT_DEBUG("window tile addr 0x%X", map);
+	}
+	else
+	{
+		map = BG_MAP ? 0x9C00 : 0x9800;
+		tilenum = _mmu->PaccessAt(map + ((((_y + sy) / 8) * 32) + (((ex + sx) / 8))));
+		iswin = false;
+		PRINT_DEBUG("background tile addr 0x%X", map);
+	}
+}
+
+void	ppu::getbyte()
+{
+	if (iswin)
+	{
+		TDAT ? fetch8((_y - wy) % 8) : fetch9((_y - wy) % 8);
+	}
+	else
+	{
+		TDAT ? fetch8((_y + sy) % 8) : fetch9((_y + sy) % 8);
+	}
+}
+
+void	ppu::spritecheck()
+{
+	if (!sprite && spritecount && SPRITE_ON)
+	{
+		unsigned ex = _x + 8;
+		for (unsigned char i = 0; i < spritecount; i++)
+			if (!sprite && spriteattr[i][SPRITE_X] <= ex && ex < (spriteattr[i][SPRITE_X] + (unsigned)8))
+			{
+				spriteindex = i;
+				_sclk = 9; //the first two cycles are happening here
+				unsigned char sub = iswin ? (255 - wx) % 8 : sx % 8;
+				_sclk -= (sub > 5) ? 5 : sub;
+				sprite = true;
+				tilenum = spriteattr[spriteindex][SPRITE_T];
+				cstate = 1;
+				return;
+			}
+	}
+	cstate = 0;
+}
+
+void	ppu::getsprite()
+{
+//	PRINT_DEBUG("sprite");
+	unsigned ey = _y - (spriteattr[spriteindex][SPRITE_Y] - 16);
+	if (SPRITE_S)
+	{
+		if (SP_YFLIP)
+			ey = 16 - ey;
+		if (ey < 8)
+		{
+			tilenum = SP_YFLIP ? tilenum | 0x01 : tilenum & 0xFE;
+//			PRINT_DEBUG("16ey %u", ey);
+			fetch8(ey);
+		}
+		else
+		{
+			tilenum = SP_YFLIP ? tilenum & 0xFE : tilenum | 0x01;
+//			PRINT_DEBUG("16ey %u", ey - 8);
+			fetch8(ey - 8);
+		}
+	}
+	else
+	{
+		if (SP_YFLIP)
+			ey = 7 - ey;
+//		PRINT_DEBUG("8ey %u", ey);
+		fetch8(ey);
+	}
+	if (!(cstate % 2))
+	{
+//		PRINT_DEBUG("sprite bufgen");
+		try {genBuf(sptile);}
+		catch (const char *e)
+		{PRINT_DEBUG("Sprite %s", e);}
+		if (SP_XFLIP)
+			for (unsigned char i = 0; i < 8; i++)
+			{
+				unsigned char t = sptile[i];
+				sptile[i] = sptile[7 - i];
+				sptile[7 - i] = t;
+			}
+	}
+}
+
+void	ppu::fetch8(unsigned char offset)
+{
+	PRINT_DEBUG("8000 addressing");
+//	PRINT_DEBUG("x %u y %u offset %u", _x, _y, offset);
+	if (cstate % 2)
+		tbyte[0] = _mmu->PaccessAt((0x8000 + (tilenum * 16)) + (2 * offset));
+	else
+		tbyte[1] = _mmu->PaccessAt(1 + ((0x8000 + (tilenum * 16)) + (2 * offset)));
+}
+
+void	ppu::fetch9(unsigned char offset)
+{
+	PRINT_DEBUG("9000 addressing");
+	char tn = tilenum;
+	if (cstate % 2)
+		tbyte[0] = _mmu->PaccessAt((0x9000 + (tn * 16)) + (2 * offset));
+	else
+		tbyte[1] = _mmu->PaccessAt(1 + ((0x9000 + (tn * 16)) + (2 * offset)));
+}
+
+//void	ppu::genBuf(unsigned char *t)
+void	ppu::genBuf(laz_e t)
+{
+//#ifdef DEBUG
+//	PRINT_DEBUG("bufgen");
+//	for (unsigned i = 0; i < 8; i++)
+//		printf("%u", (tbyte[0] & (1 << i)) ? 1 : 0);
+//	printf(" ");
+//	for (unsigned i = 0; i < 8; i++)
+//		printf("%u", (tbyte[1] & (1 << i)) ? 1 : 0);
 //	printf("\n");
-		//check lcdc/stat changes here
-	return 0;
+//#endif
+	if (t[0] != 0xFF)
+		throw "Error: buffer not empty";
+	for (unsigned char i = 0; i < 8; i++)
+	{
+		t[i] = ((tbyte[0] >> (7 - i) & 1)) | (((tbyte[1] >> (7 - i)) & 1) << 1);
+//		PRINT_DEBUG("%u ", t[i]);
+	}
+//#ifdef DEBUG
+//	printf("\n");
+//#endif
+}
+
+void	ppu::palletcalc()
+{
+//	PRINT_DEBUG("pallette gen");
+	unsigned char _bgp = _mmu->PaccessAt(BGP);
+	unsigned char _obp0 = _mmu->PaccessAt(OBP0);
+	unsigned char _obp1 = _mmu->PaccessAt(OBP1);
+//	PRINT_DEBUG("ctab:");
+//	for (int i = 0; i < 4; i++)
+//		PRINT_DEBUG("\t0x%08X", ctab[i]);
+	bgp[0] = ctab[_bgp & 0x03];
+	bgp[1] = ctab[(_bgp >> 2) & 0x03];
+	bgp[2] = ctab[(_bgp >> 4) & 0x03];
+	bgp[3] = ctab[(_bgp >> 6) & 0x03];
+	obp0[0] = ctab[_obp0 & 0x03]; 
+	obp0[1] = ctab[(_obp0 >> 2) & 0x03];
+	obp0[2] = ctab[(_obp0 >> 4) & 0x03];
+	obp0[3] = ctab[(_obp0 >> 6) & 0x03];
+	obp1[0] = ctab[_obp1 & 0x03];
+	obp1[1] = ctab[(_obp1 >> 2) & 0x03];
+	obp1[2] = ctab[(_obp1 >> 4) & 0x03];
+	obp1[3] = ctab[(_obp1 >> 6) & 0x03];
+//	PRINT_DEBUG("bgp: ");
+//	for (unsigned char i = 0; i < 8; i++)
+//		printf("%u", (_bgp & (1 << i)) ? 1 : 0);
+//	printf("\n");
+//	for (unsigned char i = 0; i < 4; i++)
+//		printf("\t0x%08X\n", bgp[i]);
+//	PRINT_DEBUG("obp0: ");
+//	for (unsigned char i = 0; i < 8; i++)
+//		printf("%u", (_obp0 & (1 << i)) ? 1 : 0);
+//	printf("\n");
+//	for (unsigned char i = 0; i < 4; i++)
+//		printf("\t0x%08X\n", obp0[i]);
+//	PRINT_DEBUG("obp1: ");
+//	for (unsigned char i = 0; i < 8; i++)
+//		printf("%u", (_obp1 & (1 << i)) ? 1 : 0);
+//	printf("\n");
+//	for (unsigned char i = 0; i < 4; i++)
+//		printf("\t0x%08X\n", obp1[i]);
 }
