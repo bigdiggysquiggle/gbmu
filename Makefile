@@ -12,7 +12,11 @@
 
 NAME = gbmu
 
-SRCS = ./src/*.cc
+SRCS = ./src/cart.cc ./src/cpu.cc ./src/mmu.cc ./src/gb.cc ./src/debugger.cc ./src/main.cc ./src/ppu.cc
+
+OLD_SRCS = ./src/cart.cc ./src/cpu_old.cc ./src/mmu.cc ./src/gb.cc ./src/debugger.cc ./src/main.cc ./src/ppu.cc
+
+PPU_STUB_SRCS = ./src/cart.cc ./src/cpu.cc ./src/mmu.cc ./src/gb.cc ./src/debugger.cc ./src/main.cc ./src/ppu_stub.cc
 
 COMP = clang++ -O3
 
@@ -27,6 +31,9 @@ debug: vre
 
 $(NAME):
 	$(COMP) $(SRCS) $(FLAGS) -o $(NAME) $(O) $(L)
+
+old: fclean
+	$(COMP) $(OLD_SRCS) $(FLAGS) -o $(NAME) $(O) $(L)
 
 clean:
 	rm -rf $(NAME)
