@@ -89,7 +89,11 @@ unsigned char	cpu::interrupt_check(void)
 			{
 				_mmu->writeTo(0xFF0F, intif & ~c);
 				_ime = 0;
-				call(targets[i]);
+				union address val;
+				val.addr = _registers.pc;
+				_mmu->writeTo(--_registers.sp, val.n2);
+				_mmu->writeTo(--_registers.sp, val.n1);
+				_registers.pc = targets[i];
 			}
 			if (_halt == true)
 			{
@@ -474,7 +478,6 @@ void	cpu::dec(unsigned char *reg)
 
 void	cpu::dec(unsigned short *regp)
 {
-	cycle();
 	*regp = *regp - 1;
 }
 
@@ -918,7 +921,6 @@ void	cpu::call(unsigned short addr, unsigned char ye)
 void	cpu::rst(unsigned short addr)
 {
 	union address val;
-	cycle();
 	val.addr = _registers.pc;
 	cycle();
 	_mmu->writeTo(--_registers.sp, val.n2);
@@ -926,8 +928,6 @@ void	cpu::rst(unsigned short addr)
 	_mmu->writeTo(--_registers.sp, val.n1);
 	cycle();
 	_registers.pc = addr;
-	cycle();
-	cycle();
 //	PRINT_DEBUG("rst to %hx", addr);
 //	exit(1);
 }
@@ -986,7 +986,7 @@ unsigned char	cpu::opcode_parse()
 	if (_halt == true)
 		return 4;
 	unsigned char opcode = _mmu->accessAt(_registers.pc);
-	printf("pc: 0x%04hx opcode 0x%02hhx HL 0x%04hx\n", _registers.pc, opcode, _registers.hl);
+	printf("pc: 0x%04hx opcode 0x%02hhx\n", _registers.pc, opcode);
 	_registers.pc += haltcheck;
 	if (!haltcheck)
 		haltcheck = 1;
@@ -1018,7 +1018,9 @@ unsigned char	cpu::opcode_parse()
 
 		case 0x01:	//ld bc,nn
 			addr.n1 = _mmu->accessAt(_registers.pc++);
+			cycle();
 			addr.n2 = _mmu->accessAt(_registers.pc++);
+			cycle();
 			ld(&_registers.bc, addr.addr);
 			break;
 
@@ -1066,6 +1068,7 @@ unsigned char	cpu::opcode_parse()
 			break;
 
 		case 0x0b:	//dec bc
+			cycle();
 			dec(&_registers.bc);
 			break;
 
@@ -1141,6 +1144,7 @@ unsigned char	cpu::opcode_parse()
 
 		case 0x1b:	//dec de
 			dec(&_registers.de);
+			cycle();
 			break;
 
 		case 0x1c:	//inc e
@@ -1201,6 +1205,7 @@ unsigned char	cpu::opcode_parse()
 			break;
 
 		case 0x28:	//jr z, d
+			cycle();
 			jr(_mmu->accessAt(_registers.pc++), FZ);
 			break;
 
@@ -1216,6 +1221,7 @@ unsigned char	cpu::opcode_parse()
 
 		case 0x2b:	//dec hl
 			dec(&_registers.hl);
+			cycle();
 			break;
 
 		case 0x2c:	//inc l
@@ -1237,6 +1243,7 @@ unsigned char	cpu::opcode_parse()
 
 		case 0x30:	//jr nc, d
 			jr(_mmu->accessAt(_registers.pc++), FNC);
+			cycle();
 			break;
 
 		case 0x31:	//ld sp, nn
@@ -1269,6 +1276,7 @@ unsigned char	cpu::opcode_parse()
 
 		case 0x36:	//ld [hl],n
 			ld((unsigned char *)NULL, _mmu->accessAt(_registers.pc++));
+			cycle();
 			//NULL is coded to handle the address at HL
 			break;
 
@@ -1277,6 +1285,7 @@ unsigned char	cpu::opcode_parse()
 			break;
 
 		case 0x38:	//jr c, d
+			cycle();
 			jr(_mmu->accessAt(_registers.pc++), FC);
 			break;
 
@@ -1313,77 +1322,62 @@ unsigned char	cpu::opcode_parse()
 
 		case 0x40:	//ld b,b
 			ld(&_registers.b, _registers.b);
-			cycle();
 			break;
 
 		case 0x41:	//ld b,c
 			ld(&_registers.b, _registers.c);
-			cycle();
 			break;
 
 		case 0x42:	//ld b,d
 			ld(&_registers.b, _registers.d);
-			cycle();
 			break;
 
 		case 0x43:	//ld b,e
 			ld(&_registers.b, _registers.e);
-			cycle();
 			break;
 
 		case 0x44:	//ld b,h
 			ld(&_registers.b, _registers.h);
-			cycle();
 			break;
 
 		case 0x45:	//ld b,l
 			ld(&_registers.b, _registers.l);
-			cycle();
 			break;
 
 		case 0x46:	//ld b,[hl]
 			ld(&_registers.b, _registers.hl);
-			cycle();
 			break;
 
 		case 0x47:	//ld b,a
 			ld(&_registers.b, _registers.a);
-			cycle();
 			break;
 
 		case 0x48:	//ld c,b
 			ld(&_registers.c, _registers.b);
-			cycle();
 			break;
 
 		case 0x49:	//ld c,c
 			ld(&_registers.c, _registers.c);
-			cycle();
 			break;
 
 		case 0x4a:	//ld c,d
 			ld(&_registers.c, _registers.d);
-			cycle();
 			break;
 
 		case 0x4b:	//ld c,e
 			ld(&_registers.c, _registers.e);
-			cycle();
 			break;
 
 		case 0x4c:	//ld c,h
 			ld(&_registers.c, _registers.h);
-			cycle();
 			break;
 
 		case 0x4d:	//ld c,l
 			ld(&_registers.c, _registers.l);
-			cycle();
 			break;
 
 		case 0x4e:	//ld c,[hl]
 			ld(&_registers.c, _registers.hl);
-			cycle();
 			break;
 
 		case 0x4f:	//ld c,a
@@ -1392,193 +1386,155 @@ unsigned char	cpu::opcode_parse()
 
 		case 0x50:
 			ld(&_registers.d, _registers.b);
-			cycle();
 			break;
 
 		case 0x51:
 			ld(&_registers.d, _registers.c);
-			cycle();
 			break;
 
 		case 0x52:
 			ld(&_registers.d, _registers.d);
-			cycle();
 			break;
 
 		case 0x53:
 			ld(&_registers.d, _registers.e);
-			cycle();
 			break;
 
 		case 0x54:
 			ld(&_registers.d, _registers.h);
-			cycle();
 			break;
 
 		case 0x55:
 			ld(&_registers.d, _registers.l);
-			cycle();
 			break;
 
 		case 0x56:
 			ld(&_registers.d, _registers.hl);
-			cycle();
 			break;
 
 		case 0x57:
 			ld(&_registers.d, _registers.a);
-			cycle();
 			break;
 
 		case 0x58:
 			ld(&_registers.e, _registers.b);
-			cycle();
 			break;
 
 		case 0x59:
 			ld(&_registers.e, _registers.c);
-			cycle();
 			break;
 
 		case 0x5a:
 			ld(&_registers.e, _registers.d);
-			cycle();
 			break;
 
 		case 0x5b:
 			ld(&_registers.e, _registers.e);
-			cycle();
 			break;
 
 		case 0x5c:
 			ld(&_registers.e, _registers.h);
-			cycle();
 			break;
 
 		case 0x5d:
 			ld(&_registers.e, _registers.l);
-			cycle();
 			break;
 
 		case 0x5e:
 			ld(&_registers.e, _registers.hl);
-			cycle();
 			break;
 
 		case 0x5f:
 			ld(&_registers.e, _registers.a);
-			cycle();
 			break;
 
 		case 0x60:
 			ld(&_registers.h, _registers.b);
-			cycle();
 			break;
 
 		case 0x61:
 			ld(&_registers.h, _registers.c);
-			cycle();
 			break;
 
 		case 0x62:
 			ld(&_registers.h, _registers.d);
-			cycle();
 			break;
 
 		case 0x63:
 			ld(&_registers.h, _registers.e);
-			cycle();
 			break;
 
 		case 0x64:
 			ld(&_registers.h, _registers.h);
-			cycle();
 			break;
 
 		case 0x65:
 			ld(&_registers.h, _registers.l);
-			cycle();
 			break;
 
 		case 0x66:
 			ld(&_registers.h, _registers.hl);
-			cycle();
 			break;
 
 		case 0x67:
 			ld(&_registers.h, _registers.a);
-			cycle();
 			break;
 
 		case 0x68:
 			ld(&_registers.l, _registers.b);
-			cycle();
 			break;
 
 		case 0x69:
 			ld(&_registers.l, _registers.c);
-			cycle();
 			break;
 
 		case 0x6a:
 			ld(&_registers.l, _registers.d);
-			cycle();
 			break;
 
 		case 0x6b:
 			ld(&_registers.l, _registers.e);
-			cycle();
 			break;
 
 		case 0x6c:
 			ld(&_registers.l, _registers.h);
-			cycle();
 			break;
 
 		case 0x6d:
 			ld(&_registers.l, _registers.l);
-			cycle();
 			break;
 
 		case 0x6e:
 			ld(&_registers.l, _registers.hl);
-			cycle();
 			break;
 
 		case 0x6f:
 			ld(&_registers.l, _registers.a);
-			cycle();
 			break;
 
 //NULL handles the address at HL
 		case 0x70:
 			ld((unsigned char *)NULL, _registers.b);
-			cycle();
 			break;
 
 		case 0x71:
 			ld((unsigned char *)NULL, _registers.c);
-			cycle();
 			break;
 
 		case 0x72:
 			ld((unsigned char *)NULL, _registers.d);
-			cycle();
 			break;
 
 		case 0x73:
 			ld((unsigned char *)NULL, _registers.e);
-			cycle();
 			break;
 
 		case 0x74:
 			ld((unsigned char *)NULL, _registers.h);
-			cycle();
 			break;
 
 		case 0x75:
 			ld((unsigned char *)NULL, _registers.l);
-			cycle();
 			break;
 
 		case 0x76:
@@ -1648,6 +1604,7 @@ unsigned char	cpu::opcode_parse()
 
 		case 0x86:
 			add(_mmu->accessAt(_registers.hl));
+			cycle();
 			break;
 
 		case 0x87:
@@ -1681,6 +1638,7 @@ unsigned char	cpu::opcode_parse()
 
 		case 0x8e:
 			adc(_mmu->accessAt(_registers.hl));
+			cycle();
 			break;
 
 		case 0x8f:
@@ -1714,6 +1672,7 @@ unsigned char	cpu::opcode_parse()
 
 		case 0x96:
 			sub(_mmu->accessAt(_registers.hl));
+			cycle();
 			break;
 
 		case 0x97:
@@ -1813,6 +1772,7 @@ unsigned char	cpu::opcode_parse()
 
 		case 0xae:
 			_xor(_mmu->accessAt(_registers.hl));
+			cycle();
 			break;
 
 		case 0xaf:
@@ -1879,6 +1839,7 @@ unsigned char	cpu::opcode_parse()
 
 		case 0xbe:
 			cp(_mmu->accessAt(_registers.hl));
+			cycle();
 			break;
 
 		case 0xbf:
@@ -1911,7 +1872,6 @@ unsigned char	cpu::opcode_parse()
 			break;
 
 		case 0xc4:	//call nz, nn
-			cycle();
 			addr.n1 = _mmu->accessAt(_registers.pc++);
 			cycle();
 			addr.n2 = _mmu->accessAt(_registers.pc++);
@@ -1949,6 +1909,7 @@ unsigned char	cpu::opcode_parse()
 
 		case 0xcb:	//CB table
 			opcode = _mmu->accessAt(_registers.pc++);
+			printf("cb opcode 0x%02hhx\n", opcode);
 			switch(X(opcode))
 			{
 				case 0:
@@ -2128,7 +2089,6 @@ unsigned char	cpu::opcode_parse()
 			addr.n1 = _mmu->accessAt(_registers.pc++);
 			cycle();
 			ld(addr, _registers.a);
-			cycle();
 			break;
 
 		case 0xeb:	//nop
@@ -2205,10 +2165,9 @@ unsigned char	cpu::opcode_parse()
 		case 0xfa:	//ld a, [nn]
 			addr.n1 = _mmu->accessAt(_registers.pc++);
 			cycle();
-			addr.n1 = _mmu->accessAt(_registers.pc++);
+			addr.n2 = _mmu->accessAt(_registers.pc++);
 			cycle();
 			ld(&_registers.a, addr.addr);
-			cycle();
 			break;
 /////go back and verify ld cycles the ppu properly
 		case 0xfb:	//ei
@@ -2224,7 +2183,7 @@ unsigned char	cpu::opcode_parse()
 			break;
 
 		case 0xfe:	//cp a,n
-			_or(_mmu->accessAt(_registers.pc++));
+			cp(_mmu->accessAt(_registers.pc++));
 			cycle();
 			break;
 

@@ -358,10 +358,11 @@ unsigned char	mmu::PaccessAt(unsigned short addr)
 //TODO: why is this getting stuck at oam time while running the bootstrap
 unsigned char	mmu::accessAt(unsigned short addr)
 {
+//	printf("accessing 0x%004hx: val ", addr);
 	unsigned char	val = 0xFF;
 	if (_oamtime && (addr < 0xFF80 || addr == 0xFFFF))
 	{
-		printf("this be why\n");
+		printf("0xff\n");
 		return val;
 	}
 	if (addr <= 0x7FFF || (0xA000 <= addr && addr <= 0xBFFF))
@@ -406,6 +407,7 @@ unsigned char	mmu::accessAt(unsigned short addr)
 	else if (addr == 0xFFFF)
 		val = _IE;
 //	PRINT_DEBUG("Returning: 0x%02x", val);
+	printf("0x%02hhx\n", val);
 	return val;
 }
 
@@ -447,6 +449,7 @@ void	mmu::_IOwrite(unsigned short addr, unsigned char msg)
 	if (!addr)
 		_IOReg[0x00] |= msg;
 	if (addr == 0x46 && (_IOReg[0x41] & 0x03) < 0x02)
+		//exit(1);
 		_oamtime = 640;
 }
 
