@@ -204,7 +204,7 @@ void	ppu::drawpix()
 			{
 				try{genBuf(bwtile);}
 				catch (const char *e)
-				{PRINT_DEBUG("BG %s", e);}
+				{printf("BG %s\n", e);}
 				cstate = 0;
 			}
 			else
@@ -214,7 +214,7 @@ void	ppu::drawpix()
 //			PRINT_DEBUG("tgen");
 			try{genBuf(bwtile);}
 			catch (const char *e)
-			{PRINT_DEBUG("BG %s", e);}
+			{printf("BG %s\n", e);}
 			spritecheck();
 			break;
 		case 4:
@@ -255,7 +255,7 @@ void	ppu::_drawpix(bool repeat)
 //	pix = bwtile.getPix();
 	try {pix = bwtile.getPix();}
 	catch (const char *e)
-	{PRINT_DEBUG("BG %s", e);}
+	{printf("BG %s\n", e);}
 	if (_dclk)
 	{
 		_dclk--;
@@ -276,7 +276,7 @@ void	ppu::_drawpix(bool repeat)
 //		spix = sptile.getPix();
 		try {spix = sptile.getPix();}
 		catch (const char *e)
-		{PRINT_DEBUG("Sprite %s", e);}
+		{printf("Sprite %s\n", e);}
 //		PRINT_DEBUG("lcdc & 2 %u spix %u (!spriteattr & 1<<7 %u || !bwtile %u || !lcdc & 1 %u) %u", SPRITE_ON, spix, SP_PRIO, pix, BGW_ON, (!SP_PRIO || !pix || !BGW_ON));
 	}
 //	if (sprite == true && SPRITE_ON && sptile[i] && (!SP_PRIO || !bwtile[_x / 8][ex] || !BGW_ON))
@@ -325,6 +325,7 @@ void	ppu::gettnum()
 
 void	ppu::getbyte()
 {
+	printf("LCDC 0x%02hhx TDAT 0x%02hhx\n", lcdc, TDAT);
 	if (iswin)
 	{
 		TDAT ? fetch8((_y - wy) % 8) : fetch9((_y - wy) % 8);
@@ -389,7 +390,7 @@ void	ppu::getsprite()
 //		PRINT_DEBUG("sprite bufgen");
 		try {genBuf(sptile);}
 		catch (const char *e)
-		{PRINT_DEBUG("Sprite %s", e);}
+		{printf("Sprite %s\n", e);}
 		if (SP_XFLIP)
 			for (unsigned char i = 0; i < 8; i++)
 			{
@@ -402,7 +403,7 @@ void	ppu::getsprite()
 
 void	ppu::fetch8(unsigned char offset)
 {
-	PRINT_DEBUG("8000 addressing");
+	printf("8000 addressing");
 //	PRINT_DEBUG("x %u y %u offset %u", _x, _y, offset);
 	if (cstate % 2)
 		tbyte[0] = _mmu->PaccessAt((0x8000 + (tilenum * 16)) + (2 * offset));
@@ -412,12 +413,12 @@ void	ppu::fetch8(unsigned char offset)
 
 void	ppu::fetch9(unsigned char offset)
 {
-	PRINT_DEBUG("9000 addressing");
-	char tn = tilenum;
+	printf("9000 addressing");
+	unsigned char tn = tilenum + 128;
 	if (cstate % 2)
-		tbyte[0] = _mmu->PaccessAt((0x9000 + (tn * 16)) + (2 * offset));
+		tbyte[0] = _mmu->PaccessAt((0x8800 + (tn * 16)) + (2 * offset));
 	else
-		tbyte[1] = _mmu->PaccessAt(1 + ((0x9000 + (tn * 16)) + (2 * offset)));
+		tbyte[1] = _mmu->PaccessAt(1 + ((0x8800 + (tn * 16)) + (2 * offset)));
 }
 
 //void	ppu::genBuf(unsigned char *t)

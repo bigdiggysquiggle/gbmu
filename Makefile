@@ -26,7 +26,7 @@ L = -lSDL2
 
 all: $(NAME)
 
-debug: COMP += -DDEBUG_PRINT_ON
+debug: COMP += -DDEBUG_PRINT_ON #-g -pg
 debug: vre
 
 $(NAME):
@@ -52,3 +52,6 @@ vre: fclean
 
 test: re
 	./$(NAME) ./roms/Tetris.gb > log.txt
+
+diff:
+	make re; ./gbmu ./test-roms/cpu_instrs/cpu_instrs.gb > log.txt; make old; ./gbmu ./test-roms/cpu_instrs/cpu_instrs.gb > olog.txt ; diff -y log.txt olog.txt > difflog.txt; vim difflog.txt

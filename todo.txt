@@ -1,4 +1,4 @@
-figure out why it's getting stuck in the bootloader loop that's supposed to only create the tiles in vram
+figure out why LCDC is being set to 0x8000 addressing when it shouldn't be
 
 reimplement stop command
 

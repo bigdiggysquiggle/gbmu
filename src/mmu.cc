@@ -362,7 +362,7 @@ unsigned char	mmu::accessAt(unsigned short addr)
 	unsigned char	val = 0xFF;
 	if (_oamtime && (addr < 0xFF80 || addr == 0xFFFF))
 	{
-		printf("0xff\n");
+//		printf("0xff\n");
 		return val;
 	}
 	if (addr <= 0x7FFF || (0xA000 <= addr && addr <= 0xBFFF))
@@ -407,7 +407,7 @@ unsigned char	mmu::accessAt(unsigned short addr)
 	else if (addr == 0xFFFF)
 		val = _IE;
 //	PRINT_DEBUG("Returning: 0x%02x", val);
-	printf("0x%02hhx\n", val);
+//	printf("0x%02hhx\n", val);
 	return val;
 }
 
