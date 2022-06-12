@@ -1,5 +1,5 @@
-#ifndef FUCKYOUASSHOLE
-#define FUCKYOUASSHOLE
+#ifndef LAZ_E
+#define LAZ_E
 #include <stdlib.h>
 #include <string.h>
 
