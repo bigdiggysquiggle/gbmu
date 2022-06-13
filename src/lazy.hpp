@@ -49,6 +49,10 @@ class laz_e {
 		}
 		unsigned char getPix()
 		{
+//			printf("contents: ");
+//			for (unsigned i = 0; i < _size; i++)
+//				printf("%02x ", *(_start + i));
+//			printf("\n");
 			unsigned char pix = *_start;
 			if (pix == _e)
 				throw "Error: no valid pix";

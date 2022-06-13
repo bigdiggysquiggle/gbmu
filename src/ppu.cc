@@ -1,5 +1,9 @@
 #include "print_debug.hpp"
 #include "ppu.hpp"
+
+//the following macros give a human readable name to
+//the addresses the system uses to access hardware
+//registers
 #define LCDC 0xFF40
 #define STAT 0xFF41
 #define SCY 0xFF42
@@ -11,16 +15,26 @@
 #define WY 0xFF4A
 #define WX 0xFF4B
 
+//these macros give human readable names to the
+//entries in my arrays that contain the information
+//specific to the given sprit
 #define SPRITE_Y 0
 #define SPRITE_X 1
 #define SPRITE_T 2
 #define SPRITE_A 3
 
+//these macros give human readable names to the
+//bit comparisons that we use to derive information
+//about the sprites from the raw binary data in my
+//attribute arrays
 #define SP_PAL (spriteattr[spriteindex][SPRITE_A] & 16)
 #define SP_XFLIP (spriteattr[spriteindex][SPRITE_A] & 32)
 #define SP_YFLIP (spriteattr[spriteindex][SPRITE_A] & 64)
 #define SP_PRIO	(spriteattr[spriteindex][SPRITE_A] & 128)
 
+//these macros give human readable names to the bit
+//comparisons we use to derive information from the
+//LCDC register
 #define BGW_ON (lcdc & 1)
 #define SPRITE_ON (lcdc & 2)
 #define SPRITE_S (lcdc & 4)
@@ -56,10 +70,14 @@ ppu::ppu(std::shared_ptr<mmu> mem, unsigned char type) : _mmu(mem)
 	sptile.setSize(8);
 	(void)type;
 	//TODO: factory method to generate different ppus
+	//		depending on the specific gameboy being
+	//		emulated
 }
 
 //for each 4 cycles of the CPU, the PPU does 2 things. Hence
-//_cycle accepting a boolean argument. It makes it easier that way
+//_cycle accepting a boolean argument. It makes it easier to
+//emulate this behaviour by having a simple "yes/no" to 
+//check if we've performed 2 actions yet
 
 void	ppu::cycle()
 {
@@ -86,7 +104,7 @@ void	ppu::_cycle(bool repeat)
 //	scanline. It can only display up to 10 sprites on any given line so checks
 //	are in place. Sprites can be 8x8 or 8x16 pixels as determined by a bit
 //	in the LCDC register. cstate is used here to keep track of where we are in OAM memory.
-//	It gets multiplied by 4 cuz each sprite has 4 bytes associated with it.
+//	It gets multiplied by 4 because each sprite has 4 bytes associated with it.
 //	SPRITE_Y is the scanline its first line appears on + 16. SPRITE_X is the place in
 //	the current scanline it starts being drawn + 8. SPRITE_T is the tile number that the
 //	sprite uses. SPRITE_A is a set of flags that determine the attributes of the sprite.
@@ -122,7 +140,7 @@ void	ppu::_cycle(bool repeat)
 	//each scanline is 160 pixels long. If I'm at 160 I know I need to HBLANK
 	else if ((_mmu->PaccessAt(STAT) & 0x03) == 0x03)
 	{
-		if (_x == 160)
+		if (_x >= 160)
 		{
 			spritecount = 0;
 			_dclk = 6;
@@ -149,6 +167,7 @@ void	ppu::_cycle(bool repeat)
 			_mmu->STATupdate(0x02);
 		}
 		_x = 0;
+		printf("this\n");
 		_mmu->writeTo(LY, _y);
 	}
 	_cycles += 2;
@@ -188,36 +207,37 @@ void	ppu::drawpix()
 	{
 		case 0:
 			gettnum();
-//			PRINT_DEBUG("tnum ctile %u", ctile);
+//			printf("tnum ctile %u\n", ctile);
 			cstate++;
 			break;
 		case 1:
 			getbyte();
-//			PRINT_DEBUG("byte1");
+//			printf("byte1\n");
 			cstate++;
 			break;
 		case 2:
 			getbyte();
-//			PRINT_DEBUG("byte2");
+//			printf("byte2\n");
 			ctile++;
 			if (!_x && !iswin)
 			{
 				try{genBuf(bwtile);}
 				catch (const char *e)
-				{printf("BG %s\n", e);}
+				{printf("BG1 %s\n", e);}
 				cstate = 0;
 			}
 			else
 				cstate++;
 			break;
 		case 3:
-//			PRINT_DEBUG("tgen");
+//			printf("tgen\n");
 			try{genBuf(bwtile);}
 			catch (const char *e)
-			{printf("BG %s\n", e);}
+			{printf("BG2 %s\n", e);}
 			spritecheck();
 			break;
 		case 4:
+//			printf("delay\n");
 			_dclk = _dclk + (sx % 8);
 			gettnum();
 			cstate = 1;
@@ -255,10 +275,11 @@ void	ppu::_drawpix(bool repeat)
 //	pix = bwtile.getPix();
 	try {pix = bwtile.getPix();}
 	catch (const char *e)
-	{printf("BG %s\n", e);}
+	{printf("BG drawpix %s\n", e);}
 	if (_dclk)
 	{
 		_dclk--;
+//		printf("_dclk tick\n");
 		if (repeat == true)
 			_drawpix(false);
 		return ;
@@ -266,8 +287,8 @@ void	ppu::_drawpix(bool repeat)
 	if (_x == 160)
 		return ;
 //	unsigned char ex = (_x + sx) % 8;
-	if ((_y * 160) + _x > 23040)
-		PRINT_DEBUG("bad pix at %u %u", _x, _y);
+	if ((_y * 160) + _x > 23040 ||(_y * 160) + _x < 0)
+		printf("bad pix at %u %u\n", _x, _y);
 //	unsigned char i = sprite ? _x - (spriteattr[spriteindex][SPRITE_X] - 8) : 0;
 	if (sprite == true)
 	{
@@ -325,7 +346,10 @@ void	ppu::gettnum()
 
 void	ppu::getbyte()
 {
-	printf("LCDC 0x%02hhx TDAT 0x%02hhx\n", lcdc, TDAT);
+	printf("LCDC ");
+	for (int i = 0; i < 8; i++)
+		printf("%u", (lcdc >> i) & 1);
+	printf(" TDAT 0x%02hhx\n", TDAT);
 	if (iswin)
 	{
 		TDAT ? fetch8((_y - wy) % 8) : fetch9((_y - wy) % 8);
@@ -403,7 +427,7 @@ void	ppu::getsprite()
 
 void	ppu::fetch8(unsigned char offset)
 {
-	printf("8000 addressing");
+	printf("8000 addressing\n");
 //	PRINT_DEBUG("x %u y %u offset %u", _x, _y, offset);
 	if (cstate % 2)
 		tbyte[0] = _mmu->PaccessAt((0x8000 + (tilenum * 16)) + (2 * offset));
@@ -413,7 +437,7 @@ void	ppu::fetch8(unsigned char offset)
 
 void	ppu::fetch9(unsigned char offset)
 {
-	printf("9000 addressing");
+	printf("9000 addressing\n");
 	unsigned char tn = tilenum + 128;
 	if (cstate % 2)
 		tbyte[0] = _mmu->PaccessAt((0x8800 + (tn * 16)) + (2 * offset));

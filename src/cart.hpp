@@ -108,6 +108,7 @@ class mbc1 : virtual public cart{
 		unsigned char	readFrom(unsigned short);
 		unsigned char	getBank(unsigned short);
 	private:
+		unsigned		_romBanks;
 		unsigned char	_ramg;
 		unsigned char	_bank1;
 		unsigned char	_bank2;

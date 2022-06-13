@@ -1,4 +1,5 @@
-figure out why LCDC is being set to 0x8000 addressing when it shouldn't be
+figure out why the pc is ending up in vram with nothing actually written there for it to do
+I suspect it has to do with why it's deciding it needs to access 0x60e0
 
 reimplement stop command
 
