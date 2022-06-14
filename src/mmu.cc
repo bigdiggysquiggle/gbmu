@@ -457,7 +457,7 @@ void	mmu::_IOwrite(unsigned short addr, unsigned char msg)
 
 void	mmu::writeTo(unsigned short addr, unsigned char msg)
 {
-	printf("write 0x%02hhx to 0x%04hx\n", msg, addr);
+//	printf("write 0x%02hhx to 0x%04hx\n", msg, addr);
 	if ((_IOReg[0x50] & 1) && (addr <= 0x7FFF || (0xA000 <= addr && addr <= 0xBFFF)))
 		_cart->writeTo(addr, msg);
 	else if (0x8000 <= addr && addr <= 0x9FFF)

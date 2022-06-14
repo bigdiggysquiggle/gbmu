@@ -167,7 +167,7 @@ void	ppu::_cycle(bool repeat)
 			_mmu->STATupdate(0x02);
 		}
 		_x = 0;
-		printf("this\n");
+//		printf("this\n");
 		_mmu->writeTo(LY, _y);
 	}
 	_cycles += 2;
@@ -275,7 +275,7 @@ void	ppu::_drawpix(bool repeat)
 //	pix = bwtile.getPix();
 	try {pix = bwtile.getPix();}
 	catch (const char *e)
-	{printf("BG drawpix %s\n", e);}
+	{/*printf("BG drawpix %s\n", e);*/}
 	if (_dclk)
 	{
 		_dclk--;
@@ -346,10 +346,10 @@ void	ppu::gettnum()
 
 void	ppu::getbyte()
 {
-	printf("LCDC ");
-	for (int i = 0; i < 8; i++)
-		printf("%u", (lcdc >> i) & 1);
-	printf(" TDAT 0x%02hhx\n", TDAT);
+//	printf("LCDC ");
+//	for (int i = 0; i < 8; i++)
+//		printf("%u", (lcdc >> i) & 1);
+//	printf(" TDAT 0x%02hhx\n", TDAT);
 	if (iswin)
 	{
 		TDAT ? fetch8((_y - wy) % 8) : fetch9((_y - wy) % 8);
@@ -427,7 +427,7 @@ void	ppu::getsprite()
 
 void	ppu::fetch8(unsigned char offset)
 {
-	printf("8000 addressing\n");
+//	printf("8000 addressing\n");
 //	PRINT_DEBUG("x %u y %u offset %u", _x, _y, offset);
 	if (cstate % 2)
 		tbyte[0] = _mmu->PaccessAt((0x8000 + (tilenum * 16)) + (2 * offset));
@@ -437,7 +437,7 @@ void	ppu::fetch8(unsigned char offset)
 
 void	ppu::fetch9(unsigned char offset)
 {
-	printf("9000 addressing\n");
+//	printf("9000 addressing\n");
 	unsigned char tn = tilenum + 128;
 	if (cstate % 2)
 		tbyte[0] = _mmu->PaccessAt((0x8800 + (tn * 16)) + (2 * offset));

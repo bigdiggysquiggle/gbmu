@@ -990,7 +990,7 @@ unsigned char	cpu::opcode_parse()
 	if (_halt == true)
 		return 4;
 	unsigned char opcode = _mmu->accessAt(_registers.pc);
-	printf("pc: 0x%04hx opcode 0x%02hhx\n", _registers.pc, opcode);
+//	printf("pc: 0x%04hx opcode 0x%02hhx\n", _registers.pc, opcode);
 	_registers.pc += haltcheck;
 	if (!haltcheck)
 		haltcheck = 1;
@@ -1915,7 +1915,7 @@ unsigned char	cpu::opcode_parse()
 
 		case 0xcb:	//CB table
 			opcode = _mmu->accessAt(_registers.pc++);
-			printf("cb opcode 0x%02hhx\n", opcode);
+//			printf("cb opcode 0x%02hhx\n", opcode);
 			switch(X(opcode))
 			{
 				case 0:
