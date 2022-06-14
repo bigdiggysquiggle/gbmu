@@ -199,7 +199,7 @@ mbc1::mbc1(unsigned romBanks, unsigned ramBanks, FILE *rom)
 
 void			mbc1::writeTo(unsigned short addr, unsigned char val)
 {
-	printf("write 0x%02hhx to 0x%04hx\n", val, addr);
+//	printf("write 0x%02hhx to 0x%04hx\n", val, addr);
 	if (addr <= 0x1FFF)
 		_ramg = val & 0x0F;
 	else if (0x2000 <= addr && addr <= 0x3FFF)
@@ -260,7 +260,7 @@ unsigned char	mbc1::_rombankRead(unsigned short addr)
 
 unsigned char	mbc1::_rambankRead(unsigned short addr)
 {
-	printf("we in here?\n");
+//	printf("we in here?\n");
 	unsigned char banknum = 0;
 	if ((_ramg & 0x0F) != 0x0A)
 		return (0xFF);
@@ -272,7 +272,7 @@ unsigned char	mbc1::_rambankRead(unsigned short addr)
 
 unsigned char	mbc1::readFrom(unsigned short addr)
 {
-	printf("we in here 0x%04x\n", addr);
+//	printf("we in here 0x%04x\n", addr);
 	if (addr <= 0x7FFF)
 		return(_rombankRead(addr));
 	else if (0xA000 <= addr && addr <= 0xBFFF)

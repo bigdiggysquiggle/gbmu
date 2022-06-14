@@ -609,8 +609,8 @@ void	debuggerator::setflags(int ac, char **av)
 
 void	debuggerator::cpu_print()
 {
-//	if (_cpu->_registers.pc < 0x100)
-//		return ;
+	if (!(_mmu->_IOReg[0x50] & 0x01))
+		return ;
 	unsigned char instr = _mmu->PaccessAt(_cpu->_registers.pc);
 	struct s_debugmsg db = (instr == 0xCB) ? cbtab[_mmu->PaccessAt(_cpu->_registers.pc+1)] : msgtab[instr];
 	union address arg;
