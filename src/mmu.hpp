@@ -40,8 +40,9 @@ class mmu {
 	public:
 		mmu(unsigned char);
 		void pollInput(void);
-		void loadCart(char *filename);
+		void loadCart(char *);
 		void setINTS(void);
+		void setVBLANK(void);
 		void STATupdate(unsigned char);
 //		~mmu();
 		unsigned char	accessAt(unsigned short);

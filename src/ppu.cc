@@ -108,8 +108,11 @@ void	ppu::_cycle(bool repeat)
 //	SPRITE_Y is the scanline its first line appears on + 16. SPRITE_X is the place in
 //	the current scanline it starts being drawn + 8. SPRITE_T is the tile number that the
 //	sprite uses. SPRITE_A is a set of flags that determine the attributes of the sprite.
-	if ((_mmu->PaccessAt(STAT) & 0x03) == 0x02)
+
+	unsigned char mode = (_mmu->PaccessAt(STAT) & 0x03);
+	if (mode == 0x02)
 	{
+//		printf("Mode 2 cycle count %u\n", _cycles);
 		if (spritecount < 10)
 		{
 			unsigned short addr = (0xFE00 + (cstate++ * 4));
@@ -127,7 +130,7 @@ void	ppu::_cycle(bool repeat)
 //				PRINT_DEBUG("x %u y %u t %u", spriteattr[spritecount][SPRITE_X], spriteattr[spritecount][SPRITE_Y], spriteattr[spritecount][SPRITE_T]);
 			}
 		}
-		if (cstate == 40)
+		if (cstate > 40)
 		{
 //			if (spritecount)
 //				PRINT_DEBUG("line %u sprites %u", _y, spritecount);
@@ -138,8 +141,9 @@ void	ppu::_cycle(bool repeat)
 		}
 	}
 	//each scanline is 160 pixels long. If I'm at 160 I know I need to HBLANK
-	else if ((_mmu->PaccessAt(STAT) & 0x03) == 0x03)
+	else if (mode == 0x03)
 	{
+//		printf("Mode 3 cycle count %u\n", _cycles);
 		if (_x >= 160)
 		{
 			spritecount = 0;
@@ -153,22 +157,36 @@ void	ppu::_cycle(bool repeat)
 	}
 	//allows for the scanline number to increment during VBLANK. Even though the resolution is
 	//160x144, the processor still tracks another 10 extra blank lines as VBLANK occurs.
-	else if (_cycles >= 456)
+	//splitting the 'else' and the 'if' into different lines allows for the optional printing
+	//of debug information
+	else
 	{
-		_cycles -= 456;
-		_y = _y + 1;
-		palletcalc();
-		if (_y < 144 || _y == 154)
+//		printf("Mode %u cycle count %u\n", mode, _cycles);
+		if (_cycles >= 456)
 		{
-			if (_y == 154)
-				_y = 0;
-//			PRINT_DEBUG("Mode 2");
-			cstate = 0;
-			_mmu->STATupdate(0x02);
+			_cycles -= 456;
+			_y = _y + 1;
+			palletcalc();
+			if (_y < 144 || _y == 154)
+			{
+				if (_y == 154)
+						_y = 0;
+//				PRINT_DEBUG("Mode 2");
+				cstate = 0;
+				_mmu->STATupdate(0x02);
+			}
+			_x = 0;
+//			printf("this\n");
+			_mmu->writeTo(LY, _y);
+			if (_y == 144)
+			{
+				_mmu->STATupdate(0x01);
+				_mmu->setVBLANK();
+			}
+			if (repeat)
+				_cycle(false);
+			return;
 		}
-		_x = 0;
-//		printf("this\n");
-		_mmu->writeTo(LY, _y);
 	}
 	_cycles += 2;
 	if (repeat)
@@ -287,7 +305,7 @@ void	ppu::_drawpix(bool repeat)
 	if (_x == 160)
 		return ;
 //	unsigned char ex = (_x + sx) % 8;
-	if ((_y * 160) + _x > 23040 ||(_y * 160) + _x < 0)
+	if ((_y * 160) + _x >= 23040 ||(_y * 160) + _x < 0)
 		printf("bad pix at %u %u\n", _x, _y);
 //	unsigned char i = sprite ? _x - (spriteattr[spriteindex][SPRITE_X] - 8) : 0;
 	if (sprite == true)

@@ -303,8 +303,12 @@ void	mmu::setINTS(void)
 		_IOReg[0x0F] |= 0x02;
 	if ((_IOReg[0x00] & 0x0F) != 0x0F) //joypad interrupt
 		_IOReg[0x0F] |= (1 << 4);
-	if (_IOReg[0x44] == 144)
-		_IOReg[0x0F] |= 1;
+}
+
+void			mmu::setVBLANK(void)
+{
+	if ((_IOReg[0x40] & (1 << 7)))
+		_IOReg[0x0F] |= 0x01;
 }
 
 //STAT is 0xFF41. Its 3 lower bits determine the current PPU mode.
@@ -379,10 +383,10 @@ unsigned char	mmu::accessAt(unsigned short addr)
 	}
 	else if (0x8000 <= addr && addr <= 0x9FFF)
 	{
-		if ((_IOReg[0x41] & 0x03) < 0x03)
+	//	if ((_IOReg[0x41] & 0x03) < 0x03)
 			val = _vram[_IOReg[0x4F] & 1][addr - 0x8000];
-		else
-			printf("Bad vram access\n");
+	//	else
+	//		printf("Bad vram access\n");
 	}
 	else if (0xC000 <= addr && addr <= 0xCFFF)
 		val = _wram0[addr - 0xC000];
@@ -392,10 +396,10 @@ unsigned char	mmu::accessAt(unsigned short addr)
 		val = accessAt(addr - 0x2000);
 	else if (0xFE00 <= addr && addr <= 0xFE9F)
 	{
-		if (!_oamtime && (_IOReg[0x41] & 0x03) < 2)
+	//	if (!_oamtime && (_IOReg[0x41] & 0x03) < 2)
 			val = _oam[addr - 0xFE00];
-		else
-			printf("Bad OAM access\n");
+	//	else
+	//		printf("Bad OAM access\n");
 	}
 	else if (0xFEA0 <= addr && addr <= 0xFEFF)//unused
 		val = 0xFF; //changes for cgb

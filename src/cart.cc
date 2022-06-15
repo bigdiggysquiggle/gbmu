@@ -182,6 +182,7 @@ unsigned char	cart::getBank(unsigned short addr)
 	return 1;
 }
 
+//I anticipate issues with how this is handling rom banks
 mbc1::mbc1(unsigned romBanks, unsigned ramBanks, FILE *rom)
 {
 	printf("MBC1 rom %u ram %u\n", romBanks, ramBanks);
@@ -229,7 +230,7 @@ void		mbc1::_ramWrite(unsigned short addr, unsigned char val)
 	unsigned char banknum = 0;
 	if (_ramSize > 0x2000)
 		banknum = _mode ? _bank2 : 0;
-	printf("banknum %u\n", banknum);
+//	printf("banknum %u\n", banknum);
 	_ramSpace[banknum][addr] = val;
 	if (_ramSize < 0x2000)
 	{
@@ -253,8 +254,8 @@ unsigned char	mbc1::_rombankRead(unsigned short addr)
 		while (addr >= 0x4000)
 			addr -= 0x4000;
 	}
-	if (banknum)
-		printf("banknum %u\naddr 0x%04x\n", banknum, addr);
+//	if (banknum)
+//		printf("banknum %u\naddr 0x%04x\n", banknum, addr);
 	return (_romSpace[banknum][addr]);
 }
 

@@ -679,8 +679,8 @@ void	debuggerator::cpu_print()
 
 void	debuggerator::debug_msg()
 {
-	if (out_file == 1)
-		exit(0);
+//	if (out_file == 1)
+//		exit(0);
 	if (output_data & dataflags::cpu_instrs)
 		cpu_print();
 	if (output_data & dataflags::ppu_mode)

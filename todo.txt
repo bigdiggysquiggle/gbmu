@@ -1,6 +1,8 @@
 figure out why the pc is ending up in vram with nothing actually written there for it to do
 I suspect it has to do with why it's deciding it needs to access 0x60e0
 
+figure out why pc randomly decides to jump down to 0096
+
 reimplement stop command
 
 ideally find a way to map several arrays into one super array
