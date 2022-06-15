@@ -38,44 +38,44 @@
 
 class mmu {
 	public:
-		mmu(unsigned char);
+		mmu(uint8_t);
 		void pollInput(void);
 		void loadCart(char *);
 		void setINTS(void);
 		void setVBLANK(void);
-		void STATupdate(unsigned char);
+		void STATupdate(uint8_t);
 //		~mmu();
-		unsigned char	accessAt(unsigned short);
-		unsigned char	PaccessAt(unsigned short);
-		void			writeTo(unsigned short, unsigned char);
-		void	timerInc(unsigned cycles);
+		uint8_t	accessAt(uint16_t);
+		uint8_t	PaccessAt(uint16_t);
+		void			writeTo(uint16_t, uint8_t);
+		void	timerInc(uint32_t cycles);
 		inline void	dmaTransfer()
 		{
-			unsigned short byte = (640 - _oamtime) / 4;
-//			writeTo(0xFE00 + byte, PaccessAt(((unsigned short)_IOReg[0x46] << 8) + byte));
-			_oam[byte] = PaccessAt(((unsigned short)_IOReg[0x46] << 8) + byte);
+			uint16_t byte = (640 - _oamtime) / 4;
+//			writeTo(0xFE00 + byte, PaccessAt(((uint16_t)_IOReg[0x46] << 8) + byte));
+			_oam[byte] = PaccessAt(((uint16_t)_IOReg[0x46] << 8) + byte);
 			_oamtime = _oamtime - 4;
 //			PRINT_DEBUG("_oamtime %u", _oamtime);
 		}
-		unsigned char	_cgb_mode;
+		uint8_t	_cgb_mode;
 		bool			vramWrite;
-		unsigned short	_oamtime;
+		uint16_t	_oamtime;
 		//to implement: video access and write
 		//				FF70 and FF4F cgb modes
 
 	private:
 		std::unique_ptr<cart>	_cart;
-		std::vector<std::array<unsigned char, 0x2000>>	_vram;
-		unsigned char	_wram0[0x1000];
-		std::vector<std::array<unsigned char, 0x1000>>	_wram1;
-		unsigned char	_oam[0xA0];
-		unsigned char	_IOReg[0x80];
-		unsigned char	_hram[0x80];
-		unsigned char	_IE;
-		unsigned		_clock;
-		unsigned		_tac0;
+		std::vector<std::array<uint8_t, 0x2000>>	_vram;
+		uint8_t	_wram0[0x1000];
+		std::vector<std::array<uint8_t, 0x1000>>	_wram1;
+		uint8_t	_oam[0xA0];
+		uint8_t	_IOReg[0x80];
+		uint8_t	_hram[0x80];
+		uint8_t	_IE;
+		uint32_t		_clock;
+		uint32_t		_tac0;
 
-		void	_IOwrite(unsigned short, unsigned char);
+		void	_IOwrite(uint16_t, uint8_t);
 		friend class debuggerator;
 };
 

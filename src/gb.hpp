@@ -23,8 +23,8 @@ class gb {
 		std::shared_ptr<ppu> _ppu;
 
 	protected:
-		unsigned long long	_cycles;
-		unsigned			cyc;
+		uint64_t	_cycles;
+		uint32_t	cyc;
 };
 
 #endif

@@ -38,7 +38,7 @@ void	gb::load_cart(char *name)
 
 void	gb::frame_advance()
 {
-	unsigned framecount = 0;
+	uint32_t	framecount = 0;
 	while (framecount < FRAME_TIME)
 	{
 		_mmu->pollInput();
@@ -52,6 +52,6 @@ void	gb::frame_advance()
 		if (_cycles >= CPU_FREQ)
 			_cycles -= CPU_FREQ;
 	}
-//	for (unsigned i = 0; i < 23040; i++)
+//	for (uint32_t i = 0; i < 23040; i++)
 //		PRINT_DEBUG("0x%08X", _ppu->pixels[23040]);
 }

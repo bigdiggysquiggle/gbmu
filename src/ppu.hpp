@@ -13,15 +13,15 @@
 
 class ppu {
 	public:
-		ppu(std::shared_ptr<mmu>, unsigned char);
-		void	cycle();
-		unsigned pixels[23040];
-		bool	_off;
+		ppu(std::shared_ptr<mmu>, uint8_t);
+		void		cycle();
+		uint32_t	pixels[23040];
+		bool		_off;
 
 	private:
-		inline unsigned char offcheck(unsigned char cyc)
+		inline uint8_t offcheck(uint8_t cyc)
 		{
-			unsigned char lcdon = (_mmu->PaccessAt(0xFF40) & (1 << 7));
+			uint8_t lcdon = (_mmu->PaccessAt(0xFF40) & (1 << 7));
 			if (lcdon)
 			{
 				PRINT_DEBUG("lcdon");
@@ -46,7 +46,7 @@ class ppu {
 				if (_off == false)
 				{
 					_off = true;
-					for (unsigned i = 0; i < 23040; i++)
+					for (uint32_t i = 0; i < 23040; i++)
 						pixels[i] = 0xFFFFFFFF;
 					_oncyc = 70224;
 					_cycles = 0;
@@ -63,48 +63,48 @@ class ppu {
 			}
 			return 0;
 		}
-		inline unsigned char	getMode()
+		inline uint8_t	getMode()
 		{
 			return  (_mmu->PaccessAt(0xFF41) & 3);
 		}
-		inline unsigned char	getState()
+		inline uint8_t	getState()
 		{
 			return (cstate);
 		}
-		unsigned _cycles;
-		unsigned _oncyc;
-		unsigned _dclk;
-		unsigned _sclk;
+		uint32_t _cycles;
+		uint32_t _oncyc;
+		uint32_t _dclk;
+		uint32_t _sclk;
 
-		unsigned char _x;
-		unsigned char _y;
+		uint8_t _x;
+		uint8_t _y;
 
-		unsigned char sx;
-		unsigned char sy;
-		unsigned char wx;
-		unsigned char wy;
-		unsigned char lcdc;
+		uint8_t sx;
+		uint8_t sy;
+		uint8_t wx;
+		uint8_t wy;
+		uint8_t lcdc;
 
-		unsigned char cstate;
+		uint8_t cstate;
 		std::shared_ptr<mmu> _mmu;
-		unsigned char spritecount;
-		unsigned char spriteindex;
-		unsigned char spriteattr[10][4];
-		laz_e		  sptile;
-//		unsigned char sptile[8];
+		uint8_t spritecount;
+		uint8_t spriteindex;
+		uint8_t spriteattr[10][4];
+		laz_e	sptile;
+//		uint8_t sptile[8];
 		bool		  sprite;
 
-		unsigned char tilenum;
+		uint8_t tilenum;
 		bool	iswin;
-		unsigned char tbyte[2];
-		laz_e		  bwtile;
-//		unsigned char bwtile[22][8];
-		unsigned char ctile;
+		uint8_t tbyte[2];
+		laz_e	bwtile;
+//		uint8_t bwtile[22][8];
+		uint8_t ctile;
 
-		unsigned ctab[4];
-		unsigned bgp[4];
-		unsigned obp0[4];
-		unsigned obp1[4];
+		uint32_t ctab[4];
+		uint32_t bgp[4];
+		uint32_t obp0[4];
+		uint32_t obp1[4];
 
 		void	_cycle(bool);
 		void	drawpix();
@@ -114,10 +114,10 @@ class ppu {
 		void	spritecheck();
 		void	getsprite();
 		void	getbyte();
-//		void	genBuf(unsigned char *);
+//		void	genBuf(uint8_t *);
 		void	genBuf(laz_e);
-		void	fetch8(unsigned char);
-		void	fetch9(unsigned char);
+		void	fetch8(uint8_t);
+		void	fetch9(uint8_t);
 		void	palletcalc();
 		friend class debuggerator;
 };

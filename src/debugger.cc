@@ -523,14 +523,14 @@ struct s_debugmsg cbtab[] ={
 };
 
 int			debuggerator::out_file;
-unsigned	debuggerator::flags;
-unsigned	debuggerator::format_type;
-unsigned	debuggerator::output_data;
+uint32_t	debuggerator::flags;
+uint32_t	debuggerator::format_type;
+uint32_t	debuggerator::output_data;
 int			debuggerator::i; 
 
 struct sub_flags {
 	const char *f_string;
-	unsigned	f_val;
+	uint32_t	f_val;
 };
 
 void	debuggerator::setData(int ac, char **av)
@@ -592,7 +592,7 @@ void	debuggerator::setflags(int ac, char **av)
 	for (i = 0; i < ac; i++)
 	{
 		const char *spot = strstr(flagstr, av[i]);
-		unsigned x = (spot - flagstr) / 3;
+		uint32_t x = (spot - flagstr) / 3;
 		if (spot == NULL || x >= (sizeof(flag_tab) / sizeof(struct s_flags)))
 			throw "Error: invalid flag";
 		flags |= flag_tab[x].f_val;
@@ -611,12 +611,12 @@ void	debuggerator::cpu_print()
 {
 	if (!(_mmu->_IOReg[0x50] & 0x01))
 		return ;
-	unsigned char instr = _mmu->PaccessAt(_cpu->_registers.pc);
+	uint8_t instr = _mmu->PaccessAt(_cpu->_registers.pc);
 	struct s_debugmsg db = (instr == 0xCB) ? cbtab[_mmu->PaccessAt(_cpu->_registers.pc+1)] : msgtab[instr];
 	union address arg;
-	if (format_type == (unsigned)formatflags::binjgb)
+	if (format_type == (uint32_t)formatflags::binjgb)
 	{
-		unsigned char _ppmode = _ppu->getMode();
+		uint8_t _ppmode = _ppu->getMode();
 		dprintf(out_file, "A:%02hhX F:%c%c%c%c BC:%04hX DE:%04hx HL:%04hx SP:%04hx PC:%04hx (cy: %llu) ppu:%c%u ", _cpu->_registers.a, _cpu->_registers.f & 0x80 ? 'Z' : '-', _cpu->_registers.f & 0x40 ? 'N' : '-', _cpu->_registers.f & 0x20 ? 'H' : '-', _cpu->_registers.f & 0x10 ? 'C' : '-', _cpu->_registers.bc, _cpu->_registers.de, _cpu->_registers.hl, _cpu->_registers.sp, _cpu->_registers.pc, _cycles, _ppu->_off == false ? '+' : '-', _ppmode);
 		if (_cpu->_registers.pc < 0x4000)
 			dprintf(out_file, "|[00]");
@@ -691,7 +691,7 @@ void	debuggerator::debug_msg()
 
 void	debuggerator::frame_advance()
 {
-	unsigned framecount = 0;
+	uint32_t framecount = 0;
 	while (framecount < FRAME_TIME)
 	{
 		debug_msg();
@@ -710,6 +710,6 @@ void	debuggerator::frame_advance()
 //		if (_cycles >= CPU_FREQ)
 //			_cycles -= CPU_FREQ;
 	}
-//	for (unsigned i = 0; i < 23040; i++)
+//	for (uint32_t i = 0; i < 23040; i++)
 //		PRINT_DEBUG("0x%08X", _ppu->pixels[23040]);
 }

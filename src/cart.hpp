@@ -4,6 +4,7 @@
 #include <array>
 #include <memory>
 #include <cstdio>
+#include <cstdint>
 
 // eventually implement ram loading from actual save files
 
@@ -54,21 +55,21 @@
 class cart {
 	public:
 		cart();
-		cart(FILE *, unsigned short);
+		cart(FILE *, uint16_t);
 		std::unique_ptr<cart>	loadCart(char *fname);
-		virtual void writeTo(unsigned short, unsigned char);
-		virtual unsigned char readFrom(unsigned short);
-		unsigned char	GBbit;
-		virtual unsigned char	getBank(unsigned short);
+		virtual void writeTo(uint16_t, uint8_t);
+		virtual uint8_t readFrom(uint16_t);
+		uint8_t	GBbit;
+		virtual uint8_t	getBank(uint16_t);
 	protected:
-//		std::vector<unsigned char[0x4000]> _romSpace;
-//		std::vector<unsigned char[0x2000]> _ramSpace;
-		std::vector<std::array<unsigned char, 0x4000>>	_romSpace;
-		std::vector<std::array<unsigned char, 0x2000>>	_ramSpace;
-		unsigned	_romSize;
-		unsigned	_ramSize;
-		unsigned short	romSizetab(unsigned char);
-		unsigned short	ramSizetab(unsigned char);
+//		std::vector<uint8_t[0x4000]> _romSpace;
+//		std::vector<uint8_t[0x2000]> _ramSpace;
+		std::vector<std::array<uint8_t, 0x4000>>	_romSpace;
+		std::vector<std::array<uint8_t, 0x2000>>	_ramSpace;
+		uint32_t	_romSize;
+		uint32_t	_ramSize;
+		uint16_t	romSizetab(uint8_t);
+		uint16_t	ramSizetab(uint8_t);
 };
 
 
@@ -103,20 +104,20 @@ class cart {
 class mbc1 : virtual public cart{
 	//max 2MB ROM and/or 32KB RAM
 	public:
-		mbc1(unsigned romBanks, unsigned ramBanks, FILE *rom);
-		void	writeTo(unsigned short, unsigned char);
-		unsigned char	readFrom(unsigned short);
-		unsigned char	getBank(unsigned short);
+		mbc1(uint32_t romBanks, uint32_t ramBanks, FILE *rom);
+		void	writeTo(uint16_t, uint8_t);
+		uint8_t	readFrom(uint16_t);
+		uint8_t	getBank(uint16_t);
 	private:
-		unsigned		_romBanks;
-		unsigned char	_ramg;
-		unsigned char	_bank1;
-		unsigned char	_bank2;
-		unsigned char	_mode;
+		uint32_t		_romBanks;
+		uint8_t	_ramg;
+		uint8_t	_bank1;
+		uint8_t	_bank2;
+		uint8_t	_mode;
 
-		void	_ramWrite(unsigned short addr, unsigned char val);
-		unsigned char _rombankRead(unsigned short);
-		unsigned char _rambankRead(unsigned short);
+		void	_ramWrite(uint16_t addr, uint8_t val);
+		uint8_t _rombankRead(uint16_t);
+		uint8_t _rambankRead(uint16_t);
 };
 
 //RAMG and ROMB both accessible by write to 0x0000-0x3FFF
@@ -127,36 +128,36 @@ class mbc1 : virtual public cart{
 class mbc2 : virtual public cart{
 	//max 256KB ROM and 512x4 bits RAM
 	public:
-		mbc2(unsigned romBanks, unsigned ramBanks, FILE *rom);
-		void	writeTo(unsigned short, unsigned char);
-		unsigned char	readFrom(unsigned short);
-		unsigned char	getBank(unsigned short);
+		mbc2(uint32_t romBanks, uint32_t ramBanks, FILE *rom);
+		void	writeTo(uint16_t, uint8_t);
+		uint8_t	readFrom(uint16_t);
+		uint8_t	getBank(uint16_t);
 	private:
-		unsigned char	_ramg;
-		unsigned char	_romg;
+		uint8_t	_ramg;
+		uint8_t	_romg;
 
-		void	_ramWrite(unsigned short addr, unsigned char val);
-		unsigned char _rombankRead(unsigned short);
-		unsigned char _ramRead(unsigned short);
+		void	_ramWrite(uint16_t addr, uint8_t val);
+		uint8_t _rombankRead(uint16_t);
+		uint8_t _ramRead(uint16_t);
 };
 
 class mbc3 : virtual public cart{
 	//max 2MB ROM and/or 32KB RAM
 	public:
-		mbc3(unsigned romBanks, unsigned ramBanks, FILE *rom);
-		void	writeTo(unsigned short, unsigned char);
-		unsigned char	readFrom(unsigned short);
-		unsigned char	getBank(unsigned short);
+		mbc3(uint32_t romBanks, uint32_t ramBanks, FILE *rom);
+		void	writeTo(uint16_t, uint8_t);
+		uint8_t	readFrom(uint16_t);
+		uint8_t	getBank(uint16_t);
 	private:
-		unsigned char	_ramg;
-		unsigned char	_rombank;
-		unsigned char	_rambank;
-		unsigned char	_timeLatch;
-		unsigned char	_rtcS;
-		unsigned char	_rtcM;
-		unsigned char	_rtcH;
-		unsigned char	_rtcDL;
-		unsigned char	_rtcDH;
+		uint8_t	_ramg;
+		uint8_t	_rombank;
+		uint8_t	_rambank;
+		uint8_t	_timeLatch;
+		uint8_t	_rtcS;
+		uint8_t	_rtcM;
+		uint8_t	_rtcH;
+		uint8_t	_rtcDL;
+		uint8_t	_rtcDH;
 		//write a function to set rtc registers on startup
 		//
 		//The total 9 bits of the Day Counter allow to count
@@ -171,28 +172,28 @@ class mbc3 : virtual public cart{
 		//days, making your program Year-10000-Proof, provided
 		//that the cartridge gets used at least every 511 days
 
-		void	_ramWrite(unsigned short addr, unsigned char val);
-		unsigned char _rombankRead(unsigned short);
-		unsigned char _rambankRead(unsigned short);
-		void	_latchTime(unsigned char);
+		void	_ramWrite(uint16_t addr, uint8_t val);
+		uint8_t _rombankRead(uint16_t);
+		uint8_t _rambankRead(uint16_t);
+		void	_latchTime(uint8_t);
 };
 
 class mbc5 : virtual public cart{
 	//max 8MByte ROM and/or 128KByte RAM)
 	public:
-		mbc5(unsigned romBanks, unsigned ramBanks, FILE *rom);
-		void	writeTo(unsigned short, unsigned char);
-		unsigned char	readFrom(unsigned short);
-		unsigned char	getBank(unsigned short);
+		mbc5(uint32_t romBanks, uint32_t ramBanks, FILE *rom);
+		void	writeTo(uint16_t, uint8_t);
+		uint8_t	readFrom(uint16_t);
+		uint8_t	getBank(uint16_t);
 	private:
-		unsigned char	_ramg;
-		unsigned char	_bank1;
-		unsigned char	_bank2;
-		unsigned char	_rambank;
+		uint8_t	_ramg;
+		uint8_t	_bank1;
+		uint8_t	_bank2;
+		uint8_t	_rambank;
 
-		void	_ramWrite(unsigned short addr, unsigned char val);
-		unsigned char _rombankRead(unsigned short);
-		unsigned char _rambankRead(unsigned short);
+		void	_ramWrite(uint16_t addr, uint8_t val);
+		uint8_t _rombankRead(uint16_t);
+		uint8_t _rambankRead(uint16_t);
 };
 
 #endif

@@ -4,7 +4,7 @@
 //replace this with a 100 byte array that
 //the program fills with the contents of a file
 
-unsigned char _booter[] = {
+uint8_t _booter[] = {
 /*	0x00, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f */
 
 	0x31, 0xfe, 0xff, 0xaf, 0x21, 0xff, 0x9f, 0x32, 0xcb, 0x7c, 0x20, 0xfb, 0x21, 0x26, 0xff, 0x0e,	//0x00
@@ -25,8 +25,8 @@ unsigned char _booter[] = {
 	0xf5, 0x06, 0x19, 0x78, 0x86, 0x23, 0x05, 0x20, 0xfb, 0x86, 0x20, 0xfe, 0x3e, 0x01, 0xe0, 0x50};//0xf0
 
 struct initval {
-	unsigned short addr;
-	unsigned char	val;
+	uint16_t addr;
+	uint8_t	val;
 };
 
 struct initval init_tab[] = {
@@ -65,7 +65,7 @@ struct initval init_tab[] = {
 	{0x0000, 0x00}
 };
 
-unsigned char nlogo[] = {
+uint8_t nlogo[] = {
 	0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03,
 	0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D, 0x00, 0x08,
 	0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E,
@@ -74,9 +74,9 @@ unsigned char nlogo[] = {
 	0xB9, 0x33, 0x3E};
 
 struct iomask {
-	unsigned char write;
-	unsigned char read;
-	unsigned char readonly;
+	uint8_t write;
+	uint8_t read;
+	uint8_t readonly;
 };
 
 //the below is a set of bitmasks used to emulate the
@@ -214,7 +214,7 @@ struct iomask _IOmasks[] = {
 	{0xFF, 0x00, 0xFF}, //0xFF7F unused
 };
 
-mmu::mmu(unsigned char type)
+mmu::mmu(uint8_t type)
 {
 	_cgb_mode = 0;//set to 0x03 for easy bank switch
 	_vram.resize(2);//handle cgb banks later
@@ -222,7 +222,7 @@ mmu::mmu(unsigned char type)
 	_IOReg[0x50] = 0;
 	vramWrite = false;
 	_oamtime = 0;
-	for (unsigned char io = 0; io < 0x7F; io++)
+	for (uint8_t io = 0; io < 0x7F; io++)
 		_IOReg[io] = _IOmasks[io].write;
 	_IOReg[0x00] |= 0x0F;
 	_clock = 0;
@@ -241,8 +241,8 @@ mmu::mmu(unsigned char type)
 void mmu::pollInput(void)
 {
 	_IOReg[0x00] |= 0x0F;
-	const unsigned char *keystat = SDL_GetKeyboardState(NULL);
-	unsigned char res = 0;
+	const uint8_t *keystat = SDL_GetKeyboardState(NULL);
+	uint8_t res = 0;
 	if (_IOReg[0x00] & 0x20)
 	{
 		if (keystat[SDL_SCANCODE_DOWN])
@@ -291,10 +291,10 @@ void	mmu::setINTS(void)
 {
 	if (!(_IOReg[0x40] & (1 << 7)))
 		return ;
-	unsigned char LY = _IOReg[0x44];
-	unsigned char LYC = _IOReg[0x45];
-	unsigned char STAT = _IOReg[0x41];
-	unsigned char mode = STAT & 0x03;
+	uint8_t LY = _IOReg[0x44];
+	uint8_t LYC = _IOReg[0x45];
+	uint8_t STAT = _IOReg[0x41];
+	uint8_t mode = STAT & 0x03;
 	if (LY == LYC)
 		_IOReg[0x41] |= (1 << 2);
 	else
@@ -320,10 +320,10 @@ void			mmu::setVBLANK(void)
 //in the PPU source code. Written as a nearly identical version of accessAt to
 //save on cpu instructions related to checking if we're accessing from the ppu
 //or not
-unsigned char	mmu::PaccessAt(unsigned short addr)
+uint8_t	mmu::PaccessAt(uint16_t addr)
 {
 //	PRINT_DEBUG("PAccessing 0x%04x", addr);
-	unsigned char	val = 0xFF;
+	uint8_t	val = 0xFF;
 	if (addr <= 0x7FFF || (0xA000 <= addr && addr <= 0xBFFF))
     {
         if ((addr < 0x100) && ! (_IOReg[0x50] & 0x01))
@@ -359,10 +359,10 @@ unsigned char	mmu::PaccessAt(unsigned short addr)
 //for modes 2 and 3.
 //To be used in the CPU source code.
 //TODO: why is this getting stuck at oam time while running the bootstrap
-unsigned char	mmu::accessAt(unsigned short addr)
+uint8_t	mmu::accessAt(uint16_t addr)
 {
 //	printf("accessing 0x%004hx: val ", addr);
-	unsigned char	val = 0xFF;
+	uint8_t	val = 0xFF;
 	if (_oamtime && (addr < 0xFF80 || addr == 0xFFFF))
 	{
 //		printf("0xff\n");
@@ -430,19 +430,19 @@ unsigned char	mmu::accessAt(unsigned short addr)
 
 //Used by the PPU to update the mode the STAT register shows
 //
-void	mmu::STATupdate(unsigned char mode)
+void	mmu::STATupdate(uint8_t mode)
 {
-	unsigned char _stat = _IOReg[0x41];
+	uint8_t _stat = _IOReg[0x41];
 	_stat = (_stat & 0xF8) | (mode & 0x03);
 	_IOReg[0x41] = _stat;
 }
 
 //Used to write to the IO registers using the bitmasks above
 
-void	mmu::_IOwrite(unsigned short addr, unsigned char msg)
+void	mmu::_IOwrite(uint16_t addr, uint8_t msg)
 {
 //	PRINT_DEBUG("IOwrite 0x%04X 0x%02X", addr, msg);
-	unsigned char mode;
+	uint8_t mode;
 	addr -= 0xFF00;
 	if (addr == 0x41)
 		mode = _IOReg[0x41] & 0x03;
@@ -459,7 +459,7 @@ void	mmu::_IOwrite(unsigned short addr, unsigned char msg)
 //Allows the CPU to write to areas in memory. Has memory protections in place
 //for PPU modes 2 and 3
 
-void	mmu::writeTo(unsigned short addr, unsigned char msg)
+void	mmu::writeTo(uint16_t addr, uint8_t msg)
 {
 //	printf("write 0x%02hhx to 0x%04hx\n", msg, addr);
 	if ((_IOReg[0x50] & 1) && (addr <= 0x7FFF || (0xA000 <= addr && addr <= 0xBFFF)))
@@ -504,7 +504,7 @@ void	mmu::writeTo(unsigned short addr, unsigned char msg)
 // go back and handle obscure timer behaviour
 // cpu speed 4194304
 // TODO: figure out what bug is causing the timer interrupt to not trigger properly
-void	mmu::timerInc(unsigned cycles)
+void	mmu::timerInc(uint32_t cycles)
 {
 	//FF04 DIV increments 16384 times a second (every 256 cycles, affected by double speed)
 	//FF05 TIMA increments by specified TAC frequency (load from TMA and interrupt when overflow)
@@ -515,8 +515,8 @@ void	mmu::timerInc(unsigned cycles)
 	//	01: 262144 (every 16 cycles)
 	//	10: 65536 (every 64 cycles)
 	//	11: 16384 (every 256 cycles)
-	unsigned char tac = _IOReg[0x07];
-	unsigned timatab[]= {
+	uint8_t tac = _IOReg[0x07];
+	uint32_t timatab[]= {
 		1024, 16, 64, 256};
 	_clock += cycles;
 	_tac0 += cycles;

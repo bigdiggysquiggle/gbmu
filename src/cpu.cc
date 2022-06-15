@@ -37,18 +37,18 @@ cpu::cpu(std::shared_ptr<mmu> unit, std::shared_ptr<ppu> pp) : _mmu(unit), _ppu(
 	haltcheck = 1;
 }
 
-int	cpu::imeCheck()
+bool	cpu::imeCheck()
 {
 	if (ime_set)
 	{
 		_ime = (ime_set % 2);
 		ime_set = 0;
-		return 1;
+		return true;
 	}
-	return 0;
+	return false;
 }
 
-unsigned char	nLogo[]={
+uint8_t	nLogo[]={
 	0xCE, 0xED, 0x66, 0x66, 0xCC, 0x0D, 0x00, 0x0B, 0x03,
 	0x73, 0x00, 0x83, 0x00, 0x0C, 0x00, 0x0D, 0x00, 0x08,
 	0x11, 0x1F, 0x88, 0x89, 0x00, 0x0E, 0xDC, 0xCC, 0x6E,
@@ -58,27 +58,27 @@ unsigned char	nLogo[]={
 
 /*void	cpu::checkRom(void)
 {
-	unsigned short start = 0x104;
-	unsigned short end = _registers.a == 0x01 ? 0x133 : 0x11C;
+	uint16_t start = 0x104;
+	uint16_t end = _registers.a == 0x01 ? 0x133 : 0x11C;
 	while (start <= end && nLogo[start - 0x104] == _mmu->accessAt(start))
 		start++;
 	if (start <= end)
 		throw "Error: invalid cart";
-	unsigned char modecheck = _mmu->accessAt(0x143);
+	uint8_t modecheck = _mmu->accessAt(0x143);
 	if (_registers.a == 0x11 && (modecheck == 0x80 || modecheck == 0xC0))
 		_mmu->_cgb_mode = 0x03;
 
 }*/
 
-unsigned char	cpu::interrupt_check(void)
+uint8_t	cpu::interrupt_check(void)
 {
 	int i = 0;
 	if (_halt == true || _ime)
 	{
 //		PRINT_DEBUG("interrupt checking");
-		unsigned short	targets[] = {
+		uint16_t	targets[] = {
 			0x40, 0x48, 0x50, 0x58, 0x60};
-		unsigned char 	intif = _mmu->accessAt(0xFF0F);
+		uint8_t 	intif = _mmu->accessAt(0xFF0F);
 		int c;
 		for (c = 1; c <= 0x1F && !(c & intif); c <<= 1)
 			i++;
@@ -118,7 +118,7 @@ void	cpu::reset()
 	_mmu->writeTo(0xFF50, 0x00);
 }
 
-void	cpu::setInterrupt(unsigned char INT)
+void	cpu::setInterrupt(uint8_t INT)
 {
 	//1 VBlank 2 STAT 4 Timer 8 Serial 16 Joypad
 	//VBlank happens beginning of every VBlank
@@ -131,7 +131,7 @@ void	cpu::setInterrupt(unsigned char INT)
 	_mmu->writeTo(0xFF0F, INT);
 }
 
-void	cpu::ld(unsigned char *reg, unsigned char val)
+void	cpu::ld(uint8_t *reg, uint8_t val)
 {
 	if (reg)
 		*reg = val;
@@ -144,7 +144,7 @@ void	cpu::ld(unsigned char *reg, unsigned char val)
 
 //below might need to handle (C + 0xFF00) and (n + 0xFF00)
 
-void	cpu::ld(unsigned char *regd, unsigned short addr)
+void	cpu::ld(uint8_t *regd, uint16_t addr)
 {
 	if (regd)
 	{
@@ -158,7 +158,7 @@ void	cpu::ld(unsigned char *regd, unsigned short addr)
 	}
 }
 
-void	cpu::ldd(unsigned char a)
+void	cpu::ldd(uint8_t a)
 {
 	if (a)
 		_registers.a = _mmu->accessAt(_registers.hl);
@@ -168,7 +168,7 @@ void	cpu::ldd(unsigned char a)
 	_registers.hl = _registers.hl - 1;
 }
 
-void	cpu::ldi(unsigned char a)
+void	cpu::ldi(uint8_t a)
 {
 	if (a)
 		_registers.a = _mmu->accessAt(_registers.hl);
@@ -178,12 +178,12 @@ void	cpu::ldi(unsigned char a)
 	_registers.hl++;
 }
 
-void	cpu::ld(unsigned short *regp, unsigned short val)
+void	cpu::ld(uint16_t *regp, uint16_t val)
 {
 	*regp = val;
 }
 
-void	cpu::ld(union address addr, unsigned char val)
+void	cpu::ld(union address addr, uint8_t val)
 {
 	cycle();
 	_mmu->writeTo(addr.addr, val);
@@ -198,9 +198,9 @@ void	cpu::ld(union address addr, union address val)
 
 void	cpu::ldhl(char n)
 {
-	unsigned short dis;
-	unsigned char uns = n;
-	unsigned res;
+	uint16_t dis;
+	uint8_t uns = n;
+	uint32_t res;
 	if (((_registers.sp & 0x0F) + (uns & 0x0F)) & 0xF0)
 		_registers.f |= bitflags::h;
 	else
@@ -225,7 +225,7 @@ void	cpu::ldhl(char n)
 	_registers.hl = res;
 }
 
-void	cpu::push(unsigned short *regp)
+void	cpu::push(uint16_t *regp)
 {
 	union address val;
 	val.addr = *regp;
@@ -236,7 +236,7 @@ void	cpu::push(unsigned short *regp)
 	cycle();
 }
 
-void	cpu::pop(unsigned short *regp)
+void	cpu::pop(uint16_t *regp)
 {
 	union address val;//endian is gonna kill me I swear
 	cycle();
@@ -246,10 +246,10 @@ void	cpu::pop(unsigned short *regp)
 	*regp = val.addr;
 }
 
-void	cpu::add(unsigned short *regp)
+void	cpu::add(uint16_t *regp)
 {
 	cycle();
-	unsigned res = *regp + _registers.hl;
+	uint32_t res = *regp + _registers.hl;
 	_registers.f &= ~(bitflags::n);
 	if (((_registers.hl & 0x0FFF) + (*regp & 0x0FFF)) & 0xF000)
 		_registers.f |= bitflags::h;
@@ -264,9 +264,9 @@ void	cpu::add(unsigned short *regp)
 
 void	cpu::add(char val)
 {
-	unsigned short dis;
-	unsigned char uns = val;
-	unsigned res;
+	uint16_t dis;
+	uint8_t uns = val;
+	uint32_t res;
 	if (((_registers.sp & 0x0F) + (uns & 0x0F)) & 0xF0)
 		_registers.f |= bitflags::h;
 	else
@@ -291,9 +291,9 @@ void	cpu::add(char val)
 	cycle();
 }
 
-void	cpu::add(unsigned char val)
+void	cpu::add(uint8_t val)
 {
-	unsigned short res = _registers.a + val;
+	uint16_t res = _registers.a + val;
 	if ((((_registers.a & 0x0F) + (val & 0x0F)) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
@@ -310,10 +310,10 @@ void	cpu::add(unsigned char val)
 	_registers.f &= ~(bitflags::n);
 }
 
-void	cpu::adc(unsigned char val)
+void	cpu::adc(uint8_t val)
 {
-	unsigned char c = (_registers.f & bitflags::cy) ? 1 : 0;
-	unsigned short res = _registers.a + val + c;
+	uint8_t c = (_registers.f & bitflags::cy) ? 1 : 0;
+	uint16_t res = _registers.a + val + c;
 	if ((((_registers.a & 0x0F) + (val & 0x0F) + c) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
@@ -330,9 +330,9 @@ void	cpu::adc(unsigned char val)
 	_registers.f &= ~(bitflags::n);
 }
 
-void	cpu::sub(unsigned char val)
+void	cpu::sub(uint8_t val)
 {
-	unsigned short res = _registers.a - val;
+	uint16_t res = _registers.a - val;
 	if ((((_registers.a & 0x0F) - (val & 0x0F)) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
@@ -349,10 +349,10 @@ void	cpu::sub(unsigned char val)
 	_registers.f |= bitflags::n;
 }
 
-void	cpu::sbc(unsigned char val)
+void	cpu::sbc(uint8_t val)
 {
-	unsigned char c = (_registers.f & bitflags::cy) ? 1 : 0;
-	unsigned short res = _registers.a - (val + c);
+	uint8_t c = (_registers.f & bitflags::cy) ? 1 : 0;
+	uint16_t res = _registers.a - (val + c);
 	if ((((_registers.a & 0x0F) - ((val & 0x0F) + c)) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
 	else
@@ -369,7 +369,7 @@ void	cpu::sbc(unsigned char val)
 	_registers.f |= bitflags::n;
 }
 
-void	cpu::_or(unsigned char val)
+void	cpu::_or(uint8_t val)
 {
 	_registers.a |= val;
 	_registers.f &= ~(bitflags::n + bitflags::cy + bitflags::h);
@@ -379,7 +379,7 @@ void	cpu::_or(unsigned char val)
 		_registers.f &= ~(bitflags::z);
 }
 
-void	cpu::_xor(unsigned char val)
+void	cpu::_xor(uint8_t val)
 {
 	_registers.a ^= val;
 	_registers.f &= ~(bitflags::n + bitflags::cy + bitflags::h);
@@ -389,7 +389,7 @@ void	cpu::_xor(unsigned char val)
 		_registers.f &= ~(bitflags::z);
 }
 
-void	cpu::_and(unsigned char val)
+void	cpu::_and(uint8_t val)
 {
 	_registers.a &= val;
 	_registers.f &= ~(bitflags::n | bitflags::cy);
@@ -400,9 +400,9 @@ void	cpu::_and(unsigned char val)
 		_registers.f &= ~(bitflags::z);
 }
 
-void	cpu::cp(unsigned char val)
+void	cpu::cp(uint8_t val)
 {
-	unsigned short res;
+	uint16_t res;
 
 	if ((((_registers.a & 0x0F) - (val & 0x0F)) & 0x10) == 0x10)
 		_registers.f |= bitflags::h;
@@ -420,9 +420,9 @@ void	cpu::cp(unsigned char val)
 	_registers.f |= bitflags::n;
 }
 
-void	cpu::inc(unsigned char *reg)
+void	cpu::inc(uint8_t *reg)
 {
-	unsigned char val;
+	uint8_t val;
 	if (reg)
 		val = *reg;
 	else
@@ -447,15 +447,15 @@ void	cpu::inc(unsigned char *reg)
 		_mmu->writeTo(_registers.hl, val);
 }
 
-void	cpu::inc(unsigned short *regp)
+void	cpu::inc(uint16_t *regp)
 {
 	cycle();
 	*regp += 1;
 }
 
-void	cpu::dec(unsigned char *reg)
+void	cpu::dec(uint8_t *reg)
 {
-	unsigned char val;
+	uint8_t val;
 	if (reg)
 		val = *reg;
 	else
@@ -480,15 +480,15 @@ void	cpu::dec(unsigned char *reg)
 		_mmu->writeTo(_registers.hl, val);
 }
 
-void	cpu::dec(unsigned short *regp)
+void	cpu::dec(uint16_t *regp)
 {
 	*regp = *regp - 1;
 }
 
-void	cpu::swap(unsigned char *reg)
+void	cpu::swap(uint8_t *reg)
 {
 	cycle();
-	unsigned char val;
+	uint8_t val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	val = val >> 4 | val << 4;
 	if (reg)
@@ -561,14 +561,14 @@ void	cpu::stop(void)//check p1 bits and p1 line
 		continue;
 }
 /*
-unsigned char	cpu::di(void)
+uint8_t	cpu::di(void)
 {
 	cyc += opcode_parse();
 	this->_ime = 0;
 	return cyc;
 }
 
-unsigned char	cpu::ei(void)
+uint8_t	cpu::ei(void)
 {
 	cyc += opcode_parse();
 	this->_ime = 1;
@@ -576,13 +576,13 @@ unsigned char	cpu::ei(void)
 }
 */
 
-unsigned char	cpu::di()
+uint8_t	cpu::di()
 {
 	ime_set = 2;
 	return 0;
 }
 
-unsigned char	cpu::ei()
+uint8_t	cpu::ei()
 {
 	ime_set = 1;
 	return 0;
@@ -597,7 +597,7 @@ void	cpu::rlca(void)
 
 void	cpu::rla(void)
 {
-	unsigned char cb = (_registers.f >> 4) & 0x01;
+	uint8_t cb = (_registers.f >> 4) & 0x01;
 	_registers.f = (_registers.a & 0x80) ? (_registers.f | bitflags::cy) : (_registers.f & ~(bitflags::cy));
 	_registers.a = cb | (_registers.a << 1);
 	_registers.f &= ~(bitflags::n + bitflags::h + bitflags::z);
@@ -612,16 +612,16 @@ void	cpu::rrca(void)
 
 void	cpu::rra(void)
 {
-	unsigned char cb = (_registers.f >> 4) & 0x01;
+	uint8_t cb = (_registers.f >> 4) & 0x01;
 	_registers.f = (_registers.a & 0x01) ? (_registers.f | bitflags::cy) : (_registers.f & ~(bitflags::cy));
 	_registers.a = (cb << 7) | (_registers.a >> 1);
 	_registers.f &= ~(bitflags::n + bitflags::h + bitflags::z);
 }
 
-void	cpu::rlc(unsigned char *reg)
+void	cpu::rlc(uint8_t *reg)
 {
 	cycle();
-	unsigned char val;
+	uint8_t val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	val = (val << 1) | (val >> 7);
 	_registers.f = (val & 0x01) ? (_registers.f | bitflags::cy) : (_registers.f & ~(bitflags::cy));
@@ -640,11 +640,11 @@ void	cpu::rlc(unsigned char *reg)
 	}
 }
 
-void	cpu::rl(unsigned char *reg)
+void	cpu::rl(uint8_t *reg)
 {
 	cycle();
-	unsigned char cb = (_registers.f >> 4) & 0x01;
-	unsigned char val;
+	uint8_t cb = (_registers.f >> 4) & 0x01;
+	uint8_t val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	_registers.f = (val & 0x80) ? (_registers.f | bitflags::cy) : (_registers.f & ~(bitflags::cy));
 	val = (val << 1) | cb;
@@ -663,10 +663,10 @@ void	cpu::rl(unsigned char *reg)
 	}
 }
 
-void	cpu::rrc(unsigned char *reg)
+void	cpu::rrc(uint8_t *reg)
 {
 	cycle();
-	unsigned char val;
+	uint8_t val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	_registers.f = (val & 0x01) ? (_registers.f | bitflags::cy) : (_registers.f & ~(bitflags::cy));
 	val = (val >> 1) | (val << 7);
@@ -685,11 +685,11 @@ void	cpu::rrc(unsigned char *reg)
 	}
 }
 
-void	cpu::rr(unsigned char *reg)
+void	cpu::rr(uint8_t *reg)
 {
 	cycle();
-	unsigned char cb = (_registers.f >> 4) & 0x01;
-	unsigned char val;
+	uint8_t cb = (_registers.f >> 4) & 0x01;
+	uint8_t val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	_registers.f = (val & 0x01) ? (_registers.f | bitflags::cy) : (_registers.f & ~(bitflags::cy));
 	val = (val >> 1) | (cb << 7);
@@ -708,10 +708,10 @@ void	cpu::rr(unsigned char *reg)
 	}
 }
 
-void	cpu::sla(unsigned char *reg)
+void	cpu::sla(uint8_t *reg)
 {
 	cycle();
-	unsigned char val;
+	uint8_t val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	_registers.f = (val & 0x80) ? (_registers.f | bitflags::cy) : (_registers.f & ~(bitflags::cy));
 	val <<= 1;
@@ -730,12 +730,12 @@ void	cpu::sla(unsigned char *reg)
 	}
 }
 
-void	cpu::sra(unsigned char *reg)
+void	cpu::sra(uint8_t *reg)
 {
 	cycle();
-	unsigned char val;
+	uint8_t val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
-	unsigned char bit = (val & 0x80);
+	uint8_t bit = (val & 0x80);
 	_registers.f = (val & 0x01) ? (_registers.f | bitflags::cy) : (_registers.f & ~(bitflags::cy));
 	val >>= 1;
 	val |= bit;
@@ -754,10 +754,10 @@ void	cpu::sra(unsigned char *reg)
 	}
 }
 
-void	cpu::srl(unsigned char *reg)
+void	cpu::srl(uint8_t *reg)
 {
 	cycle();
-	unsigned char val;
+	uint8_t val;
 	val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	_registers.f = (val & 0x01) ? (_registers.f | bitflags::cy) : (_registers.f & ~(bitflags::cy));
 	_registers.f &= ~(bitflags::h | bitflags::n);
@@ -776,10 +776,10 @@ void	cpu::srl(unsigned char *reg)
 	}
 }
 
-void	cpu::bit(unsigned char opcode)
+void	cpu::bit(uint8_t opcode)
 {
 	cycle();
-	unsigned char *_regtab[] = {
+	uint8_t *_regtab[] = {
 		&_registers.b,
 		&_registers.c,
 		&_registers.d,
@@ -788,9 +788,9 @@ void	cpu::bit(unsigned char opcode)
 		&_registers.l,
 		0,
 		&_registers.a };
-	unsigned char bit = 1 << Y(opcode);
-	unsigned char *reg = _regtab[Z(opcode)];
-	unsigned char val = reg ? *reg : _mmu->accessAt(_registers.hl);
+	uint8_t bit = 1 << Y(opcode);
+	uint8_t *reg = _regtab[Z(opcode)];
+	uint8_t val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	if (val & bit)
 		_registers.f &= ~(bitflags::z);
 	else
@@ -804,10 +804,10 @@ void	cpu::bit(unsigned char opcode)
 	}
 }
 
-void	cpu::set(unsigned char opcode)
+void	cpu::set(uint8_t opcode)
 {
 	cycle();
-	unsigned char *_regtab[] = {
+	uint8_t *_regtab[] = {
 		&_registers.b,
 		&_registers.c,
 		&_registers.d,
@@ -816,8 +816,8 @@ void	cpu::set(unsigned char opcode)
 		&_registers.l,
 		0,
 		&_registers.a };
-	unsigned char *reg = _regtab[Z(opcode)];
-	unsigned char val = reg ? *reg : _mmu->accessAt(_registers.hl);
+	uint8_t *reg = _regtab[Z(opcode)];
+	uint8_t val = reg ? *reg : _mmu->accessAt(_registers.hl);
 	val |= 1 << Y(opcode);
 	if (reg)
 		*reg = val;
@@ -829,10 +829,10 @@ void	cpu::set(unsigned char opcode)
 	}
 }
 
-void	cpu::res(unsigned char opcode)
+void	cpu::res(uint8_t opcode)
 {
 	cycle();
-	unsigned char *_regtab[] = {
+	uint8_t *_regtab[] = {
 		&_registers.b,
 		&_registers.c,
 		&_registers.d,
@@ -841,9 +841,9 @@ void	cpu::res(unsigned char opcode)
 		&_registers.l,
 		0,
 		&_registers.a };
-	unsigned char *reg = _regtab[Z(opcode)];
-	unsigned char val = reg ? *reg : _mmu->accessAt(_registers.hl);
-	unsigned char bit = 1 << Y(opcode);
+	uint8_t *reg = _regtab[Z(opcode)];
+	uint8_t val = reg ? *reg : _mmu->accessAt(_registers.hl);
+	uint8_t bit = 1 << Y(opcode);
 	if (val & bit)
 		val ^= bit;
 	if (reg)
@@ -856,12 +856,12 @@ void	cpu::res(unsigned char opcode)
 	}
 }
 
-void	cpu::jp(unsigned short addr)
+void	cpu::jp(uint16_t addr)
 {
 	_registers.pc = addr;
 }
 
-void	cpu::jp(unsigned short addr, unsigned short ye)
+void	cpu::jp(uint16_t addr, uint16_t ye)
 {
 	if (ye)
 	{
@@ -873,18 +873,18 @@ void	cpu::jp(unsigned short addr, unsigned short ye)
 void	cpu::jr(char dis)
 {
 	cycle();
-	unsigned short val = dis < 0 ? -dis : dis;
+	uint16_t val = dis < 0 ? -dis : dis;
 	_registers.pc = (dis < 0 ? _registers.pc - val : _registers.pc + val);
 }
 
-void	cpu::jr(char dis, unsigned short ye)
+void	cpu::jr(char dis, uint16_t ye)
 {
-//	unsigned char ftab[] = {
+//	uint8_t ftab[] = {
 //		_registers.f & bitflags::z ? 0 : 1,
 //		_registers.f & bitflags::z ? 1 : 0,
 //		_registers.f & bitflags::cy ? 0 : 1,
 //		_registers.f & bitflags::cy ? 1 : 0};
-	unsigned short val = dis < 0 ? -dis : dis;
+	uint16_t val = dis < 0 ? -dis : dis;
 	if (ye)
 	{
 		cycle();
@@ -892,7 +892,7 @@ void	cpu::jr(char dis, unsigned short ye)
 	}
 }
 
-void	cpu::call(unsigned short addr)
+void	cpu::call(uint16_t addr)
 {
 	union address val;
 	val.addr = _registers.pc;
@@ -904,9 +904,9 @@ void	cpu::call(unsigned short addr)
 	cycle();
 }
 
-void	cpu::call(unsigned short addr, unsigned char ye)
+void	cpu::call(uint16_t addr, uint8_t ye)
 {
-//	unsigned char ftab[] = {
+//	uint8_t ftab[] = {
 //		_registers.f & bitflags::z ? 0 : 1,
 //		_registers.f & bitflags::z ? 1 : 0,
 //		_registers.f & bitflags::cy ? 0 : 1,
@@ -922,7 +922,7 @@ void	cpu::call(unsigned short addr, unsigned char ye)
 	cycle();
 }
 
-void	cpu::rst(unsigned short addr)
+void	cpu::rst(uint16_t addr)
 {
 	union address val;
 	val.addr = _registers.pc;
@@ -947,9 +947,9 @@ void	cpu::ret(void)
 	cycle();
 }
 
-void	cpu::ret(unsigned char ye)
+void	cpu::ret(uint8_t ye)
 {
-//	unsigned char ftab[] = {
+//	uint8_t ftab[] = {
 //		_registers.f & bitflags::z ? 0 : 1,
 //		_registers.f & bitflags::z ? 1 : 0,
 //		_registers.f & bitflags::cy ? 0 : 1,
@@ -980,7 +980,7 @@ void	cpu::reti(void)
 //	_mmu->writeTo(0xFFFF, 0x1F);
 }
 
-unsigned char	cpu::opcode_parse()
+uint8_t	cpu::opcode_parse()
 {
 	_inCycles = 0;
 	_mmu->setINTS();
@@ -989,12 +989,12 @@ unsigned char	cpu::opcode_parse()
 //	printf("haltcheck %d ", haltcheck);
 	if (_halt == true)
 		return 4;
-	unsigned char opcode = _mmu->accessAt(_registers.pc);
+	uint8_t opcode = _mmu->accessAt(_registers.pc);
 //	printf("pc: 0x%04hx opcode 0x%02hhx\n", _registers.pc, opcode);
 	_registers.pc += haltcheck;
 	if (!haltcheck)
 		haltcheck = 1;
-	unsigned char *_regtab[] = {
+	uint8_t *_regtab[] = {
 		&_registers.b,
 		&_registers.c,
 		&_registers.d,
@@ -1270,17 +1270,17 @@ unsigned char	cpu::opcode_parse()
 			break;
 
 		case 0x34:	//inc [hl]
-			inc((unsigned char *)NULL);
+			inc((uint8_t *)NULL);
 			//NULL is coded to handle the address at HL
 			break;
 
 		case 0x35:	//dec [hl]
-			dec((unsigned char *)NULL);
+			dec((uint8_t *)NULL);
 			//NULL is coded to handle the address at HL
 			break;
 
 		case 0x36:	//ld [hl],n
-			ld((unsigned char *)NULL, _mmu->accessAt(_registers.pc++));
+			ld((uint8_t *)NULL, _mmu->accessAt(_registers.pc++));
 			cycle();
 			//NULL is coded to handle the address at HL
 			break;
@@ -1519,27 +1519,27 @@ unsigned char	cpu::opcode_parse()
 
 //NULL handles the address at HL
 		case 0x70:
-			ld((unsigned char *)NULL, _registers.b);
+			ld((uint8_t *)NULL, _registers.b);
 			break;
 
 		case 0x71:
-			ld((unsigned char *)NULL, _registers.c);
+			ld((uint8_t *)NULL, _registers.c);
 			break;
 
 		case 0x72:
-			ld((unsigned char *)NULL, _registers.d);
+			ld((uint8_t *)NULL, _registers.d);
 			break;
 
 		case 0x73:
-			ld((unsigned char *)NULL, _registers.e);
+			ld((uint8_t *)NULL, _registers.e);
 			break;
 
 		case 0x74:
-			ld((unsigned char *)NULL, _registers.h);
+			ld((uint8_t *)NULL, _registers.h);
 			break;
 
 		case 0x75:
-			ld((unsigned char *)NULL, _registers.l);
+			ld((uint8_t *)NULL, _registers.l);
 			break;
 
 		case 0x76:
@@ -1547,7 +1547,7 @@ unsigned char	cpu::opcode_parse()
 			break;
 
 		case 0x77:
-			ld((unsigned char *)NULL, _registers.a);
+			ld((uint8_t *)NULL, _registers.a);
 			break;
 
 		case 0x78:
@@ -2201,7 +2201,7 @@ unsigned char	cpu::opcode_parse()
 
 	}
 	_registers.f &= 0xF0;
-	unsigned char inst_cyc_tab[][2] = {{4, 0}, {12, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {20, 0}, {8, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {12, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {12, 0}, {8, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {12, 8}, {12, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {12, 8}, {8, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {12, 8}, {12, 0}, {8, 0}, {8, 0}, {12, 0}, {12, 0}, {12, 0}, {4, 0}, {12, 8}, {8, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {8, 0}, {8, 0}, {8, 0}, {8, 0}, {8, 0}, {8, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {20, 8}, {12, 0}, {16, 12}, {16, 0}, {24, 12}, {16, 0}, {8, 0}, {16, 0}, {20, 8}, {16, 0}, {16, 12}, {4, 0}, {24, 12}, {24, 0}, {8, 0}, {16, 0}, {20, 8}, {12, 0}, {16, 12}, {0, 0}, {24, 12}, {16, 0}, {8, 0}, {16, 0}, {20, 8}, {16, 0}, {16, 12}, {0, 0}, {24, 12}, {0, 0}, {8, 0}, {16, 0}, {12, 0}, {12, 0}, {8, 0}, {0, 0}, {0, 0}, {16, 0}, {8, 0}, {16, 0}, {16, 0}, {4, 0}, {16, 0}, {0, 0}, {0, 0}, {0, 0}, {8, 0}, {16, 0}, {12, 0}, {12, 0}, {8, 0}, {4, 0}, {0, 0}, {16, 0}, {8, 0}, {16, 0}, {12, 0}, {8, 0}, {16, 0}, {4, 0}, {0, 0}, {0, 0}, {8, 0}, {16, 0}};
+	uint8_t inst_cyc_tab[][2] = {{4, 0}, {12, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {20, 0}, {8, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {12, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {12, 0}, {8, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {12, 8}, {12, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {12, 8}, {8, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {12, 8}, {12, 0}, {8, 0}, {8, 0}, {12, 0}, {12, 0}, {12, 0}, {4, 0}, {12, 8}, {8, 0}, {8, 0}, {8, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {8, 0}, {8, 0}, {8, 0}, {8, 0}, {8, 0}, {8, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {4, 0}, {8, 0}, {4, 0}, {20, 8}, {12, 0}, {16, 12}, {16, 0}, {24, 12}, {16, 0}, {8, 0}, {16, 0}, {20, 8}, {16, 0}, {16, 12}, {4, 0}, {24, 12}, {24, 0}, {8, 0}, {16, 0}, {20, 8}, {12, 0}, {16, 12}, {0, 0}, {24, 12}, {16, 0}, {8, 0}, {16, 0}, {20, 8}, {16, 0}, {16, 12}, {0, 0}, {24, 12}, {0, 0}, {8, 0}, {16, 0}, {12, 0}, {12, 0}, {8, 0}, {0, 0}, {0, 0}, {16, 0}, {8, 0}, {16, 0}, {16, 0}, {4, 0}, {16, 0}, {0, 0}, {0, 0}, {0, 0}, {8, 0}, {16, 0}, {12, 0}, {12, 0}, {8, 0}, {4, 0}, {0, 0}, {16, 0}, {8, 0}, {16, 0}, {12, 0}, {8, 0}, {16, 0}, {4, 0}, {0, 0}, {0, 0}, {8, 0}, {16, 0}};
 	if ((_inCycles != inst_cyc_tab[opcode][0]) && (_inCycles != inst_cyc_tab[opcode][1]))
 	{
 		printf("Error: %hhd != %hhd or 0x%hhd (pc: 0x%04hx\n opcode: 0x%02hhx)\n", _inCycles, inst_cyc_tab[opcode][0], inst_cyc_tab[opcode][1],_registers.pc, opcode);

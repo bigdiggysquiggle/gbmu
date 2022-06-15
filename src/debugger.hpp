@@ -27,7 +27,7 @@
 //Note: currently vram and mmu are unimplemented options. I'm
 //not sure how I want to implement them at this time.
 //
-//Planned features: breakpoints, interactive mode, memory and
+//Planned features: breakpoint, interactive mode, memory and
 //vram viewing
 
 enum flagset {output_file = 1, output_format = 2, output_data = 4};
@@ -36,8 +36,8 @@ enum formatflags {default_output, binjgb};
 
 struct	s_debugmsg
 {
-	const char	*str;
-	int			args;
+	const char 		*str;
+	int32_t			args;
 };
 
 class debuggerator : public gb {
@@ -70,15 +70,15 @@ class debuggerator : public gb {
 		void	frame_advance();
 
 	private:
-		static int		out_file;
-		static unsigned flags;
-		static unsigned format_type;
-		static unsigned output_data;
-		static int		i;
+		static int32_t		out_file;
+		static uint32_t flags;
+		static uint32_t format_type;
+		static uint32_t output_data;
+		static int32_t		i;
 
 		typedef void (*f_func)(int, char **);
 		struct s_flags {
-			unsigned f_val;
+			uint32_t f_val;
 			f_func	f_get;
 		};
 

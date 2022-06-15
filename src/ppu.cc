@@ -51,9 +51,9 @@
 //_sclk is a separate delay used by the sprite handling logic
 //to delay the LCD clock. I'd like to combine them again but I need
 //to nail down the logic perfectly first.
-ppu::ppu(std::shared_ptr<mmu> mem, unsigned char type) : _mmu(mem)
+ppu::ppu(std::shared_ptr<mmu> mem, uint8_t type) : _mmu(mem)
 {
-	for (unsigned i = 0; i < 23040; i++)
+	for (uint32_t i = 0; i < 23040; i++)
 		pixels[i] = 0x00FFFFFF;
 	_x = 0;
 	_y = 0;
@@ -109,15 +109,15 @@ void	ppu::_cycle(bool repeat)
 //	the current scanline it starts being drawn + 8. SPRITE_T is the tile number that the
 //	sprite uses. SPRITE_A is a set of flags that determine the attributes of the sprite.
 
-	unsigned char mode = (_mmu->PaccessAt(STAT) & 0x03);
+	uint8_t mode = (_mmu->PaccessAt(STAT) & 0x03);
 	if (mode == 0x02)
 	{
 //		printf("Mode 2 cycle count %u\n", _cycles);
 		if (spritecount < 10)
 		{
-			unsigned short addr = (0xFE00 + (cstate++ * 4));
-			unsigned char y = _mmu->PaccessAt(addr);
-			unsigned char ssize = (_mmu->PaccessAt(LCDC) & (1 << 2)) ? 16 : 8;
+			uint16_t addr = (0xFE00 + (cstate++ * 4));
+			uint8_t y = _mmu->PaccessAt(addr);
+			uint8_t ssize = (_mmu->PaccessAt(LCDC) & (1 << 2)) ? 16 : 8;
 //			PRINT_DEBUG("ssize %u 0 < %u && %u < 160 && %u <= %u && %u <= %u", ssize, y, y, y, _y + 16, _y + 16, y + ssize);
 			if (0 < y && y < 160 && y <= _y + 16 && _y + 16 <=y + ssize)
 			{
@@ -288,8 +288,8 @@ void	ppu::_spritebranch()
 
 void	ppu::_drawpix(bool repeat)
 {
-	unsigned char pix = 0;
-	unsigned char spix = 0;
+	uint8_t pix = 0;
+	uint8_t spix = 0;
 //	pix = bwtile.getPix();
 	try {pix = bwtile.getPix();}
 	catch (const char *e)
@@ -304,10 +304,10 @@ void	ppu::_drawpix(bool repeat)
 	}
 	if (_x == 160)
 		return ;
-//	unsigned char ex = (_x + sx) % 8;
+//	uint8_t ex = (_x + sx) % 8;
 	if ((_y * 160) + _x >= 23040 ||(_y * 160) + _x < 0)
 		printf("bad pix at %u %u\n", _x, _y);
-//	unsigned char i = sprite ? _x - (spriteattr[spriteindex][SPRITE_X] - 8) : 0;
+//	uint8_t i = sprite ? _x - (spriteattr[spriteindex][SPRITE_X] - 8) : 0;
 	if (sprite == true)
 	{
 //		PRINT_DEBUG("_x %u sx %u", _x, sx);
@@ -342,8 +342,8 @@ void	ppu::_drawpix(bool repeat)
 
 void	ppu::gettnum()
 {
-	unsigned short map;
-	unsigned char ex = _dclk ? _x : _x + 8;
+	uint16_t map;
+	uint8_t ex = _dclk ? _x : _x + 8;
 	if (WIN_ON && _y >= wy && ex >= (wx - 7))
 	{
 		map = WIN_MAP ? 0x9C00 : 0x9800;
@@ -382,13 +382,13 @@ void	ppu::spritecheck()
 {
 	if (!sprite && spritecount && SPRITE_ON)
 	{
-		unsigned ex = _x + 8;
-		for (unsigned char i = 0; i < spritecount; i++)
-			if (!sprite && spriteattr[i][SPRITE_X] <= ex && ex < (spriteattr[i][SPRITE_X] + (unsigned)8))
+		uint32_t ex = _x + 8;
+		for (uint8_t i = 0; i < spritecount; i++)
+			if (!sprite && spriteattr[i][SPRITE_X] <= ex && ex < (spriteattr[i][SPRITE_X] + (uint32_t)8))
 			{
 				spriteindex = i;
 				_sclk = 9; //the first two cycles are happening here
-				unsigned char sub = iswin ? (255 - wx) % 8 : sx % 8;
+				uint8_t sub = iswin ? (255 - wx) % 8 : sx % 8;
 				_sclk -= (sub > 5) ? 5 : sub;
 				sprite = true;
 				tilenum = spriteattr[spriteindex][SPRITE_T];
@@ -402,7 +402,7 @@ void	ppu::spritecheck()
 void	ppu::getsprite()
 {
 //	PRINT_DEBUG("sprite");
-	unsigned ey = _y - (spriteattr[spriteindex][SPRITE_Y] - 16);
+	uint32_t ey = _y - (spriteattr[spriteindex][SPRITE_Y] - 16);
 	if (SPRITE_S)
 	{
 		if (SP_YFLIP)
@@ -434,16 +434,16 @@ void	ppu::getsprite()
 		catch (const char *e)
 		{printf("Sprite %s\n", e);}
 		if (SP_XFLIP)
-			for (unsigned char i = 0; i < 8; i++)
+			for (uint8_t i = 0; i < 8; i++)
 			{
-				unsigned char t = sptile[i];
+				uint8_t t = sptile[i];
 				sptile[i] = sptile[7 - i];
 				sptile[7 - i] = t;
 			}
 	}
 }
 
-void	ppu::fetch8(unsigned char offset)
+void	ppu::fetch8(uint8_t offset)
 {
 //	printf("8000 addressing\n");
 //	PRINT_DEBUG("x %u y %u offset %u", _x, _y, offset);
@@ -453,31 +453,31 @@ void	ppu::fetch8(unsigned char offset)
 		tbyte[1] = _mmu->PaccessAt(1 + ((0x8000 + (tilenum * 16)) + (2 * offset)));
 }
 
-void	ppu::fetch9(unsigned char offset)
+void	ppu::fetch9(uint8_t offset)
 {
 //	printf("9000 addressing\n");
-	unsigned char tn = tilenum + 128;
+	uint8_t tn = tilenum + 128;
 	if (cstate % 2)
 		tbyte[0] = _mmu->PaccessAt((0x8800 + (tn * 16)) + (2 * offset));
 	else
 		tbyte[1] = _mmu->PaccessAt(1 + ((0x8800 + (tn * 16)) + (2 * offset)));
 }
 
-//void	ppu::genBuf(unsigned char *t)
+//void	ppu::genBuf(uint8_t *t)
 void	ppu::genBuf(laz_e t)
 {
 //#ifdef DEBUG
 //	PRINT_DEBUG("bufgen");
-//	for (unsigned i = 0; i < 8; i++)
+//	for (uint32_t i = 0; i < 8; i++)
 //		printf("%u", (tbyte[0] & (1 << i)) ? 1 : 0);
 //	printf(" ");
-//	for (unsigned i = 0; i < 8; i++)
+//	for (uint32_t i = 0; i < 8; i++)
 //		printf("%u", (tbyte[1] & (1 << i)) ? 1 : 0);
 //	printf("\n");
 //#endif
 	if (t[0] != 0xFF)
 		throw "Error: buffer not empty";
-	for (unsigned char i = 0; i < 8; i++)
+	for (uint8_t i = 0; i < 8; i++)
 	{
 		t[i] = ((tbyte[0] >> (7 - i) & 1)) | (((tbyte[1] >> (7 - i)) & 1) << 1);
 //		PRINT_DEBUG("%u ", t[i]);
@@ -490,9 +490,9 @@ void	ppu::genBuf(laz_e t)
 void	ppu::palletcalc()
 {
 //	PRINT_DEBUG("pallette gen");
-	unsigned char _bgp = _mmu->PaccessAt(BGP);
-	unsigned char _obp0 = _mmu->PaccessAt(OBP0);
-	unsigned char _obp1 = _mmu->PaccessAt(OBP1);
+	uint8_t _bgp = _mmu->PaccessAt(BGP);
+	uint8_t _obp0 = _mmu->PaccessAt(OBP0);
+	uint8_t _obp1 = _mmu->PaccessAt(OBP1);
 //	PRINT_DEBUG("ctab:");
 //	for (int i = 0; i < 4; i++)
 //		PRINT_DEBUG("\t0x%08X", ctab[i]);
@@ -509,21 +509,21 @@ void	ppu::palletcalc()
 	obp1[2] = ctab[(_obp1 >> 4) & 0x03];
 	obp1[3] = ctab[(_obp1 >> 6) & 0x03];
 //	PRINT_DEBUG("bgp: ");
-//	for (unsigned char i = 0; i < 8; i++)
+//	for (uint8_t i = 0; i < 8; i++)
 //		printf("%u", (_bgp & (1 << i)) ? 1 : 0);
 //	printf("\n");
-//	for (unsigned char i = 0; i < 4; i++)
+//	for (uint8_t i = 0; i < 4; i++)
 //		printf("\t0x%08X\n", bgp[i]);
 //	PRINT_DEBUG("obp0: ");
-//	for (unsigned char i = 0; i < 8; i++)
+//	for (uint8_t i = 0; i < 8; i++)
 //		printf("%u", (_obp0 & (1 << i)) ? 1 : 0);
 //	printf("\n");
-//	for (unsigned char i = 0; i < 4; i++)
+//	for (uint8_t i = 0; i < 4; i++)
 //		printf("\t0x%08X\n", obp0[i]);
 //	PRINT_DEBUG("obp1: ");
-//	for (unsigned char i = 0; i < 8; i++)
+//	for (uint8_t i = 0; i < 8; i++)
 //		printf("%u", (_obp1 & (1 << i)) ? 1 : 0);
 //	printf("\n");
-//	for (unsigned char i = 0; i < 4; i++)
+//	for (uint8_t i = 0; i < 4; i++)
 //		printf("\t0x%08X\n", obp1[i]);
 }
