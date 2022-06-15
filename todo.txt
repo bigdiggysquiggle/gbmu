@@ -3,6 +3,8 @@ I suspect it has to do with why it's deciding it needs to access 0x60e0
 
 figure out why pc randomly decides to jump down to 0096
 
+sprites get printed with an extra line of pixels
+
 reimplement stop command
 
 ideally find a way to map several arrays into one super array
