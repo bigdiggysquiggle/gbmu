@@ -18,7 +18,7 @@
 //every 4 cycles so that the PPU can handle graphics in parallel with the CPU
 //as happens on real hardware
 
-cpu::cpu(std::shared_ptr<mmu> unit, std::shared_ptr<ppu> pp) : _mmu(unit), _ppu(pp)
+cpu::cpu(std::shared_ptr<mmu> unit, std::shared_ptr<ppu> pp)
 {
 	//have gb run cart verification before this
 //	_registers.af = 0x01B0; //0x11B0 for cgb and 0xffB0 for pocket
@@ -34,6 +34,8 @@ cpu::cpu(std::shared_ptr<mmu> unit, std::shared_ptr<ppu> pp) : _mmu(unit), _ppu(
 	_registers.pc = 0x00;
 	_registers.sp = 0x00;
 	_halt = false;
+	_mmu = unit;
+	_ppu = pp;
 	haltcheck = 1;
 }
 

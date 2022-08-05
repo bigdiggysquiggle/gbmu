@@ -227,6 +227,8 @@ mmu::mmu(uint8_t type)
 	_IOReg[0x00] |= 0x0F;
 	_clock = 0;
 	_tac0 = 0;
+	_IE = 0;
+	_cart = NULL;
 	(void)type;
 // TODO: factory method to generate the different mmus 
 }
@@ -273,9 +275,8 @@ void mmu::pollInput(void)
 
 void mmu::loadCart(char *filename)
 {
-	cart _tmp;
 	_IOReg[0x50] = 0xFE;
-	_cart = _tmp.loadCart(filename);
+	_cart = cart::loadCart(filename);
 }
 
 //bit values for each type of interrupt:

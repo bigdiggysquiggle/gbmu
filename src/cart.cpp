@@ -1,5 +1,8 @@
 #include "print_debug.hpp"
 #include "cart.hpp"
+uint8_t cart::GBbit;
+uint32_t cart::_romSize;
+uint32_t cart::_ramSize;
 
 cart::cart()
 {

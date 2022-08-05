@@ -56,20 +56,21 @@ class cart {
 	public:
 		cart();
 		cart(FILE *, uint16_t);
-		std::unique_ptr<cart>	loadCart(char *fname);
+		virtual ~cart() = default;
+		static std::unique_ptr<cart>	loadCart(char *fname);
 		virtual void writeTo(uint16_t, uint8_t);
 		virtual uint8_t readFrom(uint16_t);
-		uint8_t	GBbit;
+		static uint8_t	GBbit;
 		virtual uint8_t	getBank(uint16_t);
 	protected:
 //		std::vector<uint8_t[0x4000]> _romSpace;
 //		std::vector<uint8_t[0x2000]> _ramSpace;
 		std::vector<std::array<uint8_t, 0x4000>>	_romSpace;
 		std::vector<std::array<uint8_t, 0x2000>>	_ramSpace;
-		uint32_t	_romSize;
-		uint32_t	_ramSize;
-		uint16_t	romSizetab(uint8_t);
-		uint16_t	ramSizetab(uint8_t);
+		static uint32_t	_romSize;
+		static uint32_t	_ramSize;
+		static uint16_t	romSizetab(uint8_t);
+		static uint16_t	ramSizetab(uint8_t);
 };
 
 
@@ -105,6 +106,7 @@ class mbc1 : virtual public cart{
 	//max 2MB ROM and/or 32KB RAM
 	public:
 		mbc1(uint32_t romBanks, uint32_t ramBanks, FILE *rom);
+		~mbc1() = default;
 		void	writeTo(uint16_t, uint8_t);
 		uint8_t	readFrom(uint16_t);
 		uint8_t	getBank(uint16_t);
@@ -129,6 +131,7 @@ class mbc2 : virtual public cart{
 	//max 256KB ROM and 512x4 bits RAM
 	public:
 		mbc2(uint32_t romBanks, uint32_t ramBanks, FILE *rom);
+		~mbc2() = default;
 		void	writeTo(uint16_t, uint8_t);
 		uint8_t	readFrom(uint16_t);
 		uint8_t	getBank(uint16_t);
@@ -145,6 +148,7 @@ class mbc3 : virtual public cart{
 	//max 2MB ROM and/or 32KB RAM
 	public:
 		mbc3(uint32_t romBanks, uint32_t ramBanks, FILE *rom);
+		~mbc3() = default;
 		void	writeTo(uint16_t, uint8_t);
 		uint8_t	readFrom(uint16_t);
 		uint8_t	getBank(uint16_t);
@@ -182,6 +186,7 @@ class mbc5 : virtual public cart{
 	//max 8MByte ROM and/or 128KByte RAM)
 	public:
 		mbc5(uint32_t romBanks, uint32_t ramBanks, FILE *rom);
+		~mbc5() = default;
 		void	writeTo(uint16_t, uint8_t);
 		uint8_t	readFrom(uint16_t);
 		uint8_t	getBank(uint16_t);

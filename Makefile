@@ -12,11 +12,11 @@
 
 NAME = gbmu
 
-SRCS = ./src/cart.cc ./src/cpu.cc ./src/mmu.cc ./src/gb.cc ./src/debugger.cc ./src/main.cc ./src/ppu.cc
+SRCS = ./src/cart.cpp ./src/cpu.cpp ./src/mmu.cpp ./src/gb.cpp ./src/debugger.cpp ./src/main.cpp ./src/ppu.cpp
 
-OLD_SRCS = ./src/cart.cc ./src/cpu_old.cc ./src/mmu.cc ./src/gb.cc ./src/debugger.cc ./src/main.cc ./src/ppu.cc
+OLD_SRCS = ./src/cart.cpp ./src/cpu_old.cpp ./src/mmu.cpp ./src/gb.cpp ./src/debugger.cpp ./src/main.cpp ./src/ppu.cpp
 
-PPU_STUB_SRCS = ./src/cart.cc ./src/cpu.cc ./src/mmu.cc ./src/gb.cc ./src/debugger.cc ./src/main.cc ./src/ppu_stub.cc
+PPU_STUB_SRCS = ./src/cart.cpp ./src/cpu.cpp ./src/mmu.cpp ./src/gb.cpp ./src/debugger.cpp ./src/main.cpp ./src/ppu_stub.cpp
 
 COMP = clang++ -O3
 
