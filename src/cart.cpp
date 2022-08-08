@@ -1,7 +1,8 @@
 #include "print_debug.hpp"
 #include "cart.hpp"
 uint8_t cart::GBbit;
-uint32_t cart::_romSize;
+uint32_t cart::_romBanks;
+uint32_t cart::_ramBanks;
 uint32_t cart::_ramSize;
 
 cart::cart()
@@ -43,7 +44,7 @@ uint16_t 	cart::romSizetab(uint8_t size)
 		case 0x05: //1MB 64 banks
 			return 0x40;
 		case 0x06: //2MB 128 banks
-			return 0x800;
+			return 0x80;
 		case 0x07: //4MB 256 banks
 			return 0x100;
 		case 0x08:
@@ -102,8 +103,8 @@ std::unique_ptr<cart>	cart::loadCart(char *fname)
 	if (rom == NULL)
 		throw "Error: invalid rom file";
 	fseek(rom, 0, SEEK_END);
-	_romSize = ftell(rom);
-	if (_romSize < 0x14F)
+	_romBanks = ftell(rom);//_romBanks is convenient and is going to be used to reflect the actual rom bank count later
+	if (_romBanks < 0x14F)
 	{
 		fclose(rom);
 		throw "Error: cart size (too small)";
@@ -190,6 +191,7 @@ mbc1::mbc1(uint32_t romBanks, uint32_t ramBanks, FILE *rom)
 {
 	printf("MBC1 rom %u ram %u\n", romBanks, ramBanks);
 	_romBanks = romBanks;
+	_ramBanks = ramBanks;
 	_romSpace.resize(romBanks ? romBanks : 2);
 	_ramSpace.resize(ramBanks);
 	for (uint32_t i = 0x00; i < romBanks; i++)
@@ -234,16 +236,13 @@ void		mbc1::_ramWrite(uint16_t addr, uint8_t val)
 	if (_ramSize > 0x2000)
 		banknum = _mode ? _bank2 : 0;
 //	printf("banknum %u\n", banknum);
-	_ramSpace[banknum][addr] = val;
-	if (_ramSize < 0x2000)
-	{
-		addr += _ramSize;
+	_ramSpace[banknum % _ramBanks][addr] = val;
+	if (_ramSize < 0x2000)	//could possibly become a do while
 		while (addr < 0x2000)
 		{
-			_ramSpace[banknum][addr] = val;
 			addr += _ramSize;
+			_ramSpace[banknum % _ramBanks][addr] = val;
 		}
-	}
 }
 
 uint8_t	mbc1::_rombankRead(uint16_t addr)
@@ -252,14 +251,11 @@ uint8_t	mbc1::_rombankRead(uint16_t addr)
 	if (addr >= 0x4000)
 	{
 		banknum = _bank1 | (!_mode ? (_bank2 << 5) : 0);
-		while (banknum > _romBanks)
-			banknum -= _romBanks;
-		while (addr >= 0x4000)
-			addr -= 0x4000;
+		addr -= 0x4000;
 	}
 //	if (banknum)
 //		printf("banknum %u\naddr 0x%04x\n", banknum, addr);
-	return (_romSpace[banknum][addr]);
+	return (_romSpace[banknum % _romBanks][addr]);
 }
 
 uint8_t	mbc1::_rambankRead(uint16_t addr)
@@ -270,8 +266,8 @@ uint8_t	mbc1::_rambankRead(uint16_t addr)
 		return (0xFF);
 	if (_ramSize > 0x2000)
 		banknum = _mode ? _bank2 : 0;
-	printf("banknum 0x%02hhx\n", banknum);
-	return (_ramSpace[banknum][addr]);
+//	printf("banknum 0x%02hhx\n", banknum);
+	return (_ramSpace[banknum % _ramBanks][addr]);//TODO: verify if ram banks overflow
 }
 
 uint8_t	mbc1::readFrom(uint16_t addr)
@@ -297,6 +293,7 @@ mbc2::mbc2(uint32_t romBanks, uint32_t ramBanks, FILE *rom)
 	(void)ramBanks;
 	printf("MBC2\n");
 	_romSpace.resize(romBanks ? romBanks : 2);
+	_ramBanks = ramBanks;
 	_ramSize = 0x200;
 	for (uint32_t i = 0x00; i < romBanks; i++)
 		fread(&_romSpace[i][0x00], 1, 0x4000, rom);
@@ -355,7 +352,7 @@ uint8_t	mbc2::_ramRead(uint16_t addr)
 	if ((_ramg & 0x0F) != 0x0A)
 		return (0xFF);
 	else
-		return (_ramSpace[0x00][addr]);
+		return (_ramSpace[0x00][addr % _ramSize]); //TODO: verify ram behaviour in MBC2
 }
 
 uint8_t mbc2::getBank(uint16_t addr)
@@ -370,6 +367,7 @@ mbc3::mbc3(uint32_t romBanks, uint32_t ramBanks, FILE *rom)
 	printf("MBC3\n");
 	_romSpace.resize(romBanks ? romBanks : romBanks + 2);
 	_ramSpace.resize(ramBanks);
+	_ramBanks = ramBanks;
 	_ramg = 0;
 	_rombank = 1;
 	_rambank = 0;
@@ -412,20 +410,20 @@ void		mbc3::_latchTime(uint8_t val)
 	_timeLatch = val;
 }
 
-void		mbc3::_ramWrite(uint16_t addr, uint8_t val)
+void		mbc3::_ramWrite(uint16_t addr, uint8_t val) //TODO: verify overflow behaviour of MBC2 and MBC3
 {
 	if (_ramg != 0x0A)
 		return ;
 	uint8_t banknum = 0;
 	if (_ramSize > 0x2000)
 		banknum = _rambank;
-	_ramSpace[banknum][addr] = val;
+	_ramSpace[banknum % _ramBanks][addr] = val;
 	if (_ramSize < 0x2000)
 	{
 		addr += _ramSize;
 		while (addr < 0x2000)
 		{
-			_ramSpace[banknum][addr] = val;
+			_ramSpace[banknum % _ramBanks][addr] = val;
 			addr += _ramSize;
 		}
 	}
@@ -439,7 +437,7 @@ uint8_t	mbc3::_rombankRead(uint16_t addr)
 		banknum = _rombank;
 		addr -= 0x4000;
 	}
-	return (_romSpace[banknum][addr]);
+	return (_romSpace[banknum % _romBanks][addr]);
 }
 
 uint8_t	mbc3::_rambankRead(uint16_t addr)
@@ -447,7 +445,7 @@ uint8_t	mbc3::_rambankRead(uint16_t addr)
 	if ((_ramg & 0x0F) != 0x0A)
 		return (0xFF);
 	if (_rambank < 0x08)
-		return (_ramSpace[_rambank][addr]);
+		return (_ramSpace[_rambank % _ramBanks][addr]);
 	else
 		switch (_rambank)
 		{
@@ -486,6 +484,7 @@ mbc5::mbc5(uint32_t romBanks, uint32_t ramBanks, FILE *rom)
 	printf("MBC5\n");
 	_romSpace.resize(romBanks ? romBanks : 2);
 	_ramSpace.resize(ramBanks);
+	_ramBanks = ramBanks;
 	for (uint32_t i = 0x00; i < romBanks; i++)
 		fread(&_romSpace[i][0x00], 1, 0x4000, rom);
 	_ramg = 0;
@@ -519,13 +518,13 @@ void		mbc5::_ramWrite(uint16_t addr, uint8_t val)
 	if (_ramSize > 0x2000)
 		banknum = _rambank;
 	printf("ram bank %u\n", _rambank);
-	_ramSpace[banknum][addr] = val;
+	_ramSpace[banknum % _ramBanks][addr] = val;
 	if (_ramSize < 0x2000)
 	{
 		addr += _ramSize;
 		while (addr < 0x2000)
 		{
-			_ramSpace[banknum][addr] = val;
+			_ramSpace[banknum % _ramBanks][addr] = val;
 			addr += _ramSize;
 		}
 	}
@@ -539,7 +538,7 @@ uint8_t	mbc5::_rombankRead(uint16_t addr)
 		banknum = _bank1 | (_bank2 ? 0x0100 : 0x0000);
 		addr -= 0x4000;
 	}
-	return (_romSpace[banknum][addr]);
+	return (_romSpace[banknum % _romBanks][addr]);
 }
 
 uint8_t	mbc5::_rambankRead(uint16_t addr)
@@ -550,7 +549,7 @@ uint8_t	mbc5::_rambankRead(uint16_t addr)
 		return (0xFF);
 	if (_ramSize > 0x2000)
 		banknum = _rambank;
-	return (_ramSpace[banknum][addr]);
+	return (_ramSpace[banknum % _ramBanks][addr]);
 }
 
 uint8_t	mbc5::readFrom(uint16_t addr)

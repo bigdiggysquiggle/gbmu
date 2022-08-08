@@ -19,6 +19,54 @@ class ppu {
 		bool		_off;
 
 	private:
+		uint32_t _cycles;
+		uint32_t _oncyc;
+		uint32_t _dclk;
+		uint32_t _sclk;
+
+		uint8_t _x;
+		uint8_t _y;
+
+		uint8_t sx;
+		uint8_t sy;
+		uint8_t wx;
+		uint8_t wy;
+		uint8_t lcdc;
+
+		uint8_t cstate;
+		std::shared_ptr<mmu> _mmu;
+		uint8_t spritecount;
+		uint8_t spriteindex;
+		uint8_t spriteattr[10][4];
+		laz_e	sptile;
+//		uint8_t sptile[8];
+		bool		  sprite;
+
+		uint8_t tilenum;
+		bool	iswin;
+		uint8_t tbyte[2];
+		laz_e	bwtile;
+//		uint8_t bwtile[22][8];
+		uint8_t ctile;
+
+		uint32_t ctab[4];
+		uint32_t bgp[4];
+		uint32_t obp0[4];
+		uint32_t obp1[4];
+
+		void	_cycle(bool);
+		void	drawpix();
+		void	_drawpix(bool);
+		void	_spritebranch();
+		void	gettnum();
+		void	spritecheck();
+		void	getsprite();
+		void	getbyte();
+//		void	genBuf(uint8_t *);
+		void	genBuf(laz_e);
+		void	fetch8(uint8_t);
+		void	fetch9(uint8_t);
+		void	palletcalc();
 		inline uint8_t offcheck(uint8_t cyc)
 		{
 			uint8_t lcdon = (_mmu->PaccessAt(0xFF40) & (1 << 7));
@@ -71,54 +119,6 @@ class ppu {
 		{
 			return (cstate);
 		}
-		uint32_t _cycles;
-		uint32_t _oncyc;
-		uint32_t _dclk;
-		uint32_t _sclk;
-
-		uint8_t _x;
-		uint8_t _y;
-
-		uint8_t sx;
-		uint8_t sy;
-		uint8_t wx;
-		uint8_t wy;
-		uint8_t lcdc;
-
-		uint8_t cstate;
-		std::shared_ptr<mmu> _mmu;
-		uint8_t spritecount;
-		uint8_t spriteindex;
-		uint8_t spriteattr[10][4];
-		laz_e	sptile;
-//		uint8_t sptile[8];
-		bool		  sprite;
-
-		uint8_t tilenum;
-		bool	iswin;
-		uint8_t tbyte[2];
-		laz_e	bwtile;
-//		uint8_t bwtile[22][8];
-		uint8_t ctile;
-
-		uint32_t ctab[4];
-		uint32_t bgp[4];
-		uint32_t obp0[4];
-		uint32_t obp1[4];
-
-		void	_cycle(bool);
-		void	drawpix();
-		void	_drawpix(bool);
-		void	_spritebranch();
-		void	gettnum();
-		void	spritecheck();
-		void	getsprite();
-		void	getbyte();
-//		void	genBuf(uint8_t *);
-		void	genBuf(laz_e);
-		void	fetch8(uint8_t);
-		void	fetch9(uint8_t);
-		void	palletcalc();
 		friend class debuggerator;
 };
 

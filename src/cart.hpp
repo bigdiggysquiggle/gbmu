@@ -67,8 +67,9 @@ class cart {
 //		std::vector<uint8_t[0x2000]> _ramSpace;
 		std::vector<std::array<uint8_t, 0x4000>>	_romSpace;
 		std::vector<std::array<uint8_t, 0x2000>>	_ramSpace;
-		static uint32_t	_romSize;
+		static uint32_t	_romBanks;
 		static uint32_t	_ramSize;
+		static uint32_t _ramBanks;
 		static uint16_t	romSizetab(uint8_t);
 		static uint16_t	ramSizetab(uint8_t);
 };

@@ -19,27 +19,6 @@ int main(int ac, char **av)
 {
 	if (ac == 1)
 		printf("Error: no file given");
-#ifdef DEBUG_PRINT_ON
-	debuggerator _gb;
-	try {
-	_gb.setflags(ac - 2, av + 2);}
-	catch (char const *e)
-	{
-		printf("%s\n", e);
-		return (1);
-	}
-#else
-	gb	_gb;
-#endif
-	try 
-	{
-		_gb.load_cart(av[1]);
-	}
-	catch (const char *msg)
-	{
-		std::cout << msg << std::endl;
-		return 1;
-	}
 	SDL_Window *win;
 //	SDL_Surface *screen;
 	SDL_Texture *frame;
@@ -62,6 +41,27 @@ int main(int ac, char **av)
 	SDL_Event e;
 	bool	quit = false;
 	SDL_PumpEvents();
+#ifdef DEBUG_PRINT_ON
+	debuggerator _gb = debuggerator();
+	try {
+	_gb.setflags(ac - 2, av + 2);}
+	catch (char const *e)
+	{
+		printf("%s\n", e);
+		return (1);
+	}
+#else
+	gb	_gb = gb();
+#endif
+	try
+	{
+		_gb.load_cart(av[1]);
+	}
+	catch (const char *msg)
+	{
+		std::cout << msg << std::endl;
+		return 1;
+	}
 	while (quit == false)
 	{
 		_gb.frame_advance();

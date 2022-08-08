@@ -18,7 +18,7 @@ OLD_SRCS = ./src/cart.cpp ./src/cpu_old.cpp ./src/mmu.cpp ./src/gb.cpp ./src/deb
 
 PPU_STUB_SRCS = ./src/cart.cpp ./src/cpu.cpp ./src/mmu.cpp ./src/gb.cpp ./src/debugger.cpp ./src/main.cpp ./src/ppu_stub.cpp
 
-COMP = clang++ -O3
+COMP = g++ -O3
 
 #FLAGS = -Wall -Werror -Wextra -Wshadow -pedantic -O2
 
@@ -30,10 +30,10 @@ debug: COMP += -DDEBUG_PRINT_ON #-g -pg
 debug: vre
 
 $(NAME):
-	$(COMP) $(SRCS) $(FLAGS) -o $(NAME) $(O) $(L)
+	$(COMP) $(SRCS) $(FLAGS) -o $(NAME) $(L)
 
 old: fclean
-	$(COMP) $(OLD_SRCS) $(FLAGS) -o $(NAME) $(O) $(L)
+	$(COMP) $(OLD_SRCS) $(FLAGS) -o $(NAME) $(L)
 
 clean:
 	rm -rf $(NAME)
@@ -45,10 +45,10 @@ fclean: clean
 re: fclean all
 
 lre: fclean
-	$(COMP) -fsanitize=address $(SRCS) -o $(NAME) $(O) $(L)
+	$(COMP) -fsanitize=address $(SRCS) -o $(NAME) $(L)
 
 vre: fclean
-	$(COMP) -g -pg $(SRCS) -o $(NAME) $(O) $(L)
+	$(COMP) -g -pg $(SRCS) -o $(NAME) $(L)
 
 test: re
 	./$(NAME) ./roms/Tetris.gb > log.txt

@@ -51,23 +51,47 @@
 //_sclk is a separate delay used by the sprite handling logic
 //to delay the LCD clock. I'd like to combine them again but I need
 //to nail down the logic perfectly first.
-ppu::ppu(std::shared_ptr<mmu> mem, uint8_t type) : _mmu(mem)
+ppu::ppu(std::shared_ptr<mmu> mem, uint8_t type)
 {
 	for (uint32_t i = 0; i < 23040; i++)
 		pixels[i] = 0x00FFFFFF;
 	_x = 0;
 	_y = 0;
-	spritecount = 0;
+	sx = 0;
+	sy = 0;
+	wx = 0;
+	wy = 0;
+	lcdc = 0;
+	cstate = 0;
 	_cycles = 0;
 	_oncyc = 70224;
 	_dclk = 6;
 	_sclk = 0;
+	_mmu =  mem;
+	spritecount = 0;
+	spriteindex = 0;
+	for (int i = 0; i < 10; i++)
+		for (int j = 0; j < 4; j++)
+			spriteattr[i][j] = 0;
+	sprite = false;
+	tilenum = 0;
+	iswin = false;
+	tbyte[0] = 0;
+	tbyte[1] = 0;
+	ctile = 0;
 	ctab[0] = 0x00FFFFFF;
 	ctab[1] = 0x00AAAAAA;
 	ctab[2] = 0x00555555;
 	ctab[3] = 0x00000000;
+	for (int i = 0; i < 4; i++)
+		bgp[i] = 0;
+	for (int i = 0; i < 4; i++)
+		obp0[i] = 0;
+	for (int i = 0; i < 4; i++)
+		obp1[i] = 0;
 	bwtile.setSize(8);
 	sptile.setSize(8);
+	_off = true;
 	(void)type;
 	//TODO: factory method to generate different ppus
 	//		depending on the specific gameboy being

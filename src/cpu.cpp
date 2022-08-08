@@ -37,6 +37,9 @@ cpu::cpu(std::shared_ptr<mmu> unit, std::shared_ptr<ppu> pp)
 	_mmu = unit;
 	_ppu = pp;
 	haltcheck = 1;
+	_inCycles = 0;
+	ime_set = 0;
+	_ime = 0;
 }
 
 bool	cpu::imeCheck()

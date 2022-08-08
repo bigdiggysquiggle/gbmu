@@ -67,9 +67,9 @@ class cpu {
 		void		reset();
 		void		setInterrupt(uint8_t);
 		uint8_t		opcode_parse(void);
-		uint64_t	cyc;
 		bool		imeCheck();
 //		void		checkRom(void);
+		uint64_t	cyc;
 
 	private:
 		std::shared_ptr<mmu>	_mmu;
