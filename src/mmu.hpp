@@ -9,7 +9,7 @@
 // - fixed bank 0, switchable bank 1
 //0x8000 - 0x9fff vram area for tiles
 // - 0x8000 - 0x97FF hold tiles themselves
-// - - 0x10 byte tiles, 0x180 in 3 blocks of 0x80 
+// - - 0x10 byte tiles, 0x180 in 3 blocks of 0x80
 // - two tile maps, 0x9800-0x9BFF, 0x9C00-0x9FFF
 // - - 32 x 32 bytes
 // - can only access in modes 0, 1, 2
@@ -31,7 +31,7 @@
 // - this is where the actual hardware behaviour is configured
 //   and where info about hardware can be read
 // 0xFF80 - 0xFFFE hram
-// - slightly faster than other ram. 
+// - slightly faster than other ram.
 
 #define DMG 1
 #define GBC 2

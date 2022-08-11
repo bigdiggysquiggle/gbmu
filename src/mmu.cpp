@@ -1,5 +1,6 @@
 #include "print_debug.hpp"
 #include "mmu.hpp"
+#include <iostream>
 
 //replace this with a 100 byte array that
 //the program fills with the contents of a file
@@ -219,18 +220,24 @@ mmu::mmu(uint8_t type)
 	_cgb_mode = 0;//set to 0x03 for easy bank switch
 	_vram.resize(2);//handle cgb banks later
 	_wram1.resize(7);//handle cgb banks later
-	_IOReg[0x50] = 0;
+//	_IOReg[0x50] = 0;
 	vramWrite = false;
 	_oamtime = 0;
 	for (uint8_t io = 0; io < 0x7F; io++)
 		_IOReg[io] = _IOmasks[io].write;
+	for (uint16_t i = 0; i < 0x1000; i++)
+		_wram0[i] = 0;
+	for (uint8_t i = 0; i < 0xA0; i++)
+		_oam[i] = 0;
+	for (uint8_t i = 0; i < 0x80; i++)
+		_hram[i] = 0;
 	_IOReg[0x00] |= 0x0F;
 	_clock = 0;
 	_tac0 = 0;
 	_IE = 0;
 	_cart = NULL;
 	(void)type;
-// TODO: factory method to generate the different mmus 
+// TODO: factory method to generate the different mmus
 }
 		//Bit values for each button when polling input
 		//20 10 (toggles between reading the dpad and reading the buttons
