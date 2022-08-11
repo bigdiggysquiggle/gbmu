@@ -14,8 +14,6 @@ NAME = gbmu
 
 SRCS = ./src/cart.cpp ./src/cpu.cpp ./src/mmu.cpp ./src/gb.cpp ./src/debugger.cpp ./src/main.cpp ./src/ppu.cpp
 
-OLD_SRCS = ./src/cart.cpp ./src/cpu_old.cpp ./src/mmu.cpp ./src/gb.cpp ./src/debugger.cpp ./src/main.cpp ./src/ppu.cpp
-
 PPU_STUB_SRCS = ./src/cart.cpp ./src/cpu.cpp ./src/mmu.cpp ./src/gb.cpp ./src/debugger.cpp ./src/main.cpp ./src/ppu_stub.cpp
 
 COMP = g++ -O3
@@ -53,5 +51,8 @@ vre: fclean
 test: re
 	./$(NAME) ./roms/Tetris.gb > log.txt
 
+vtest: vre
+	valgrind --track-origins=yes --leak-check=full ./gbmu ~/Downloads/gb/Super Mario Land.gb
+
 diff:
-	make re; ./gbmu ./test-roms/cpu_instrs/cpu_instrs.gb > log.txt; make old; ./gbmu ./test-roms/cpu_instrs/cpu_instrs.gb > olog.txt ; diff -y log.txt olog.txt > difflog.txt; vim difflog.txt
+	make debug; ./gbmu ./test-roms/cpu_instrs/cpu_instrs.gb -o log.txt -f binjgb -d cpu; ./binjgb/out/Debug/binjgb-debugger -t ./test-roms/cpu_instrs/cpu_instrs.gb > olog.txt ; diff --suppress-common-lines -y log.txt olog.txt > difflog.txt; vim difflog.txt

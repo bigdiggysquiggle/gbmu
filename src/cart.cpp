@@ -185,8 +185,10 @@ uint8_t	cart::getBank(uint16_t addr)
 		return 0;
 	return 1;
 }
-
+#include <iostream>
+#include <fstream>
 //I anticipate issues with how this is handling rom banks
+//TODO: make sure advanced rombanking is properly implemented
 mbc1::mbc1(uint32_t romBanks, uint32_t ramBanks, FILE *rom)
 {
 	printf("MBC1 rom %u ram %u\n", romBanks, ramBanks);
@@ -196,6 +198,12 @@ mbc1::mbc1(uint32_t romBanks, uint32_t ramBanks, FILE *rom)
 	_ramSpace.resize(ramBanks);
 	for (uint32_t i = 0x00; i < romBanks; i++)
 		fread(&_romSpace[i][0x00], 1, 0x4000, rom);
+	std::ofstream dump;
+	dump.open("dump.gb");
+	for (uint32_t i = 0x00; i < romBanks; i++)
+		for (uint32_t j = 0x00; j < 0x4000; j++)
+			dump << _romSpace[i][j];
+	dump.close();
 	_ramg = 0;
 	_bank1 = 1;
 	_bank2 = 0;
@@ -247,7 +255,7 @@ void		mbc1::_ramWrite(uint16_t addr, uint8_t val)
 
 uint8_t	mbc1::_rombankRead(uint16_t addr)
 {
-	uint8_t banknum = 0;
+	uint8_t banknum = !_mode ? 0 : _bank2;
 	if (addr >= 0x4000)
 	{
 		banknum = _bank1 | (!_mode ? (_bank2 << 5) : 0);
@@ -261,11 +269,9 @@ uint8_t	mbc1::_rombankRead(uint16_t addr)
 uint8_t	mbc1::_rambankRead(uint16_t addr)
 {
 //	printf("we in here?\n");
-	uint8_t banknum = 0;
+	uint8_t banknum = !_mode ? 0 : _bank2;
 	if ((_ramg & 0x0F) != 0x0A)
 		return (0xFF);
-	if (_ramSize > 0x2000)
-		banknum = _mode ? _bank2 : 0;
 //	printf("banknum 0x%02hhx\n", banknum);
 	return (_ramSpace[banknum % _ramBanks][addr]);//TODO: verify if ram banks overflow
 }
