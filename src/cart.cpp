@@ -198,12 +198,6 @@ mbc1::mbc1(uint32_t romBanks, uint32_t ramBanks, FILE *rom)
 	_ramSpace.resize(ramBanks);
 	for (uint32_t i = 0x00; i < romBanks; i++)
 		fread(&_romSpace[i][0x00], 1, 0x4000, rom);
-	std::ofstream dump;
-	dump.open("dump.gb");
-	for (uint32_t i = 0x00; i < romBanks; i++)
-		for (uint32_t j = 0x00; j < 0x4000; j++)
-			dump << _romSpace[i][j];
-	dump.close();
 	_ramg = 0;
 	_bank1 = 1;
 	_bank2 = 0;
