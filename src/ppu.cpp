@@ -17,7 +17,7 @@
 
 //these macros give human readable names to the
 //entries in my arrays that contain the information
-//specific to the given sprit
+//specific to the given sprite
 #define SPRITE_Y 0
 #define SPRITE_X 1
 #define SPRITE_T 2

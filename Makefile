@@ -55,4 +55,4 @@ vtest: vre
 	valgrind --track-origins=yes --leak-check=full ./gbmu ~/Downloads/gb/Super Mario Land.gb
 
 diff:
-	make debug; ./gbmu ./test-roms/cpu_instrs/cpu_instrs.gb -o log.txt -f binjgb -d cpu; ./binjgb/out/Debug/binjgb-debugger -t ./test-roms/cpu_instrs/cpu_instrs.gb > olog.txt ; diff --suppress-common-lines -y log.txt olog.txt > difflog.txt; vim difflog.txt
+	make debug; ./gbmu ./roms/'Super Mario Land.gb' -o log.txt -f binjgb -d cpu; ./binjgb/out/Debug/binjgb-debugger -t ./roms/'Super Mario Land.gb' > olog.txt ; diff --suppress-common-lines -y log.txt olog.txt > difflog.txt; vim difflog.txt
