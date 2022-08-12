@@ -304,10 +304,10 @@ void	mmu::setINTS(void)
 	uint8_t STAT = _IOReg[0x41];
 	uint8_t mode = STAT & 0x03;
 	if (LY == LYC)
-		_IOReg[0x41] |= (1 << 2);
+		_IOReg[0x41] |= 1 << 2;
 	else
 		_IOReg[0x41] &= ~(1 << 2);
-	if (((LY == LYC && _IOReg[0x41] & (1 << 6)) || (mode == 2 && _IOReg[0x41] & (1 << 5)) || (mode == 1 && (_IOReg[0x41] & (1 << 4) || _IOReg[0x41] & (1 << 5))) || (mode == 0 && _IOReg[0x41] & (1 << 3))))
+	if (((STAT & (1 << 2) && STAT & (1 << 6)) || (mode == 2 && STAT & (1 << 5)) || (mode == 1 && (STAT & (1 << 4))) || (mode == 0 && STAT & (1 << 3))))
 		_IOReg[0x0F] |= 0x02;
 	if ((_IOReg[0x00] & 0x0F) != 0x0F) //joypad interrupt
 		_IOReg[0x0F] |= (1 << 4);

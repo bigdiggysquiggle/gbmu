@@ -78,15 +78,14 @@ uint8_t	nLogo[]={
 uint8_t	cpu::interrupt_check(void)
 {
 	int i = 0;
+	imeCheck();
 	if (_halt == true || _ime)
 	{
 //		PRINT_DEBUG("interrupt checking");
 		uint16_t	targets[] = {
 			0x40, 0x48, 0x50, 0x58, 0x60};
 		uint8_t 	intif = _mmu->accessAt(0xFF0F);
-		int c;
-		for (c = 1; c <= 0x1F && !(c & intif); c <<= 1)
-			i++;
+		uint8_t c;
 		if (c <= 0x1F && (c & _mmu->accessAt(0xFFFF)))
 		{
 //			PRINT_DEBUG("jump to 0x%02x", targets[i]);
@@ -104,7 +103,7 @@ uint8_t	cpu::interrupt_check(void)
 			{
 				_halt = false;
 				haltcheck = _ime ? 1 : 0;
-//			   return opcode_parse(_ime ? 1 : 0);	
+//			   return opcode_parse(_ime ? 1 : 0);
 			}
 		}
 	}
@@ -559,8 +558,8 @@ void	cpu::halt(void)//halt waits for an IF & IE != 0
 }
 
 //just realized my stop probably infinite loops. my b
-//reimplement in a manner similar to halt.
-void	cpu::stop(void)//check p1 bits and p1 line
+//TODO: reimplement in a manner similar to halt.
+void	cpu::stop(void)//TODO: check p1 bits and p1 line
 {
 	while ((_mmu->accessAt(0xFF00) & 0xFF) == 0xFF)
 		continue;

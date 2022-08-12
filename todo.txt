@@ -1,4 +1,4 @@
-figure out why the interrupts aren't working
+figure out HALT implementation
 
 figure out why the pc is ending up in vram with nothing actually written there for it to do
 I suspect it has to do with why it's deciding it needs to access 0x60e0
